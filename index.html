@@ -440,8 +440,8 @@
           <svg id="chartSvg" viewBox="0 0 900 360" preserveAspectRatio="none"></svg>
           <div class="tooltip" id="tooltip"></div>
         </div>
-        <div class="alert" id="alertRuptura">⚠ Estoque projetado chega a zero antes dos 30 dias.</div>
-        <div class="alert warn" id="alertEstouro">⚠ Entrada supera a capacidade máxima em algum ponto — excedente seria perdido/transbordado.</div>
+        <div class="alert" id="alertRuptura">⚠ Estoque de bagaço zerado antes dos 30 dias.</div>
+        <div class="alert warn" id="alertEstouro">⚠ Limite de armazenagem excedido — excedente seria perdido/transbordado.</div>
       </div>
 
       <div class="hist-card">
@@ -727,11 +727,11 @@ function recalc(){
   const statFinalNote = document.getElementById('statFinalNote');
   const statFinalCard = document.getElementById('statFinalCard');
   if(ruptura !== null){
-    statFinalNote.textContent = `⚠ zera em ${ruptura} dia${ruptura>1?'s':''} (a partir de hoje)`;
+    statFinalNote.textContent = `⚠ estoque de bagaço zerado em ${ruptura} dia${ruptura>1?'s':''} (a partir de hoje)`;
     statFinalNote.className = 'stat-note warn';
     statFinalCard.style.setProperty('--stat-color', 'var(--danger)');
   } else if(diaEstouro !== null){
-    statFinalNote.textContent = `atinge o máximo em ${diaEstouro} dia${diaEstouro>1?'s':''} (a partir de hoje)`;
+    statFinalNote.textContent = `limite de armazenagem excedido em ${diaEstouro} dia${diaEstouro>1?'s':''} (a partir de hoje)`;
     statFinalNote.className = 'stat-note info';
     statFinalCard.style.setProperty('--stat-color', 'var(--gold)');
   } else {
@@ -741,7 +741,7 @@ function recalc(){
 
   document.getElementById('alertRuptura').classList.toggle('show', ruptura !== null);
   if(ruptura !== null){
-    document.getElementById('alertRuptura').textContent = `⚠ Estoque projetado chega a zero no dia ${ruptura}.`;
+    document.getElementById('alertRuptura').textContent = `⚠ Estoque de bagaço zerado no dia ${ruptura}.`;
   }
   document.getElementById('alertEstouro').classList.toggle('show', estouro);
 
@@ -991,8 +991,11 @@ function buildResumoWhatsapp(){
     ? `Entrada média (últ. ${r.mediaDiasUsados}d): *${fmt(r.entrada,0)} t/dia*`
     : `Entrada estimada: *${fmt(r.entrada,0)} t/dia*`;
   const rupturaLinha = r.ruptura !== null
-    ? `⚠ Ruptura prevista no dia *${r.ruptura}*`
-    : '✅ Sem previsão de ruptura daqui 30 dias';
+    ? `⚠ Estoque de bagaço zerado no dia *${r.ruptura}*`
+    : '✅ Sem previsão de estoque de bagaço zerado daqui 30 dias';
+  const estouroLinha = r.diaEstouro !== null
+    ? `\n🟡 Limite de armazenagem excedido em *${r.diaEstouro} dia${r.diaEstouro>1?'s':''}* (a partir de hoje)`
+    : '';
 
   return `*PROJEÇÃO DE ESTOQUE DE BAGAÇO*\n`
     + `Estoque atual: *${fmt(r.estoqueAtual,0)} t* de ${fmt(r.estoqueMax,0)} t máx. (${fmt(pct,0)}%)\n\n`
@@ -1000,7 +1003,8 @@ function buildResumoWhatsapp(){
     + `Saída diária: *${fmt(r.saida,0)} t/dia*\n`
     + `Saldo diário: *${(r.saldo>=0?'+':'')}${fmt(r.saldo,0)} t/dia*\n\n`
     + `Estoque projetado (dia 30): *${fmt(r.estoqueDia30,0)} t*\n`
-    + `${rupturaLinha}`;
+    + `${rupturaLinha}`
+    + `${estouroLinha}`;
 }
 
 const btnWhatsapp = document.getElementById('btnWhatsapp');
