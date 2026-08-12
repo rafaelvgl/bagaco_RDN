@@ -54,7 +54,10 @@
   .sub{color:var(--text-mid);font-size:13px;max-width:680px;line-height:1.5;}
 
   .layout{display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start;}
-  @media (max-width:900px){.layout{grid-template-columns:1fr;}}
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;}
+    .sticky{position:static;top:auto;}
+  }
 
   .panel{
     background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
