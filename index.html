@@ -264,6 +264,9 @@
   .stat .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
   .stat .v{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;color:var(--stat-color,var(--text));}
   .stat .v small{font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:11px;color:var(--text-dim);margin-left:3px;}
+  .stat-note{font-size:10.5px;margin-top:5px;color:var(--text-dim);line-height:1.4;}
+  .stat-note.warn{color:var(--danger);}
+  .stat-note.info{color:var(--gold);}
 
   .chart-card{
     background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
@@ -418,9 +421,10 @@
           <div class="k">Saldo diário</div>
           <div class="v" id="statSaldo">—<small>t/dia</small></div>
         </div>
-        <div class="stat" style="--stat-color:var(--text);">
+        <div class="stat" id="statFinalCard" style="--stat-color:var(--text);">
           <div class="k">Estoque dia 30</div>
           <div class="v" id="statFinal">—<small>t</small></div>
+          <div class="stat-note" id="statFinalNote"></div>
         </div>
       </div>
 
@@ -697,11 +701,15 @@ function recalc(){
 
   // simulate 30 days
   const serie = [estoqueAtual];
-  let ruptura = null, estouro = false;
+  let ruptura = null, estouro = false, diaEstouro = null;
   let valor = estoqueAtual;
   for(let d=1; d<=30; d++){
     let novo = valor + saldo;
-    if(novo > estoqueMax){ estouro = true; novo = estoqueMax; }
+    if(novo > estoqueMax){
+      estouro = true;
+      if(diaEstouro === null) diaEstouro = d;
+      novo = estoqueMax;
+    }
     if(novo <= 0){
       novo = 0;
       if(ruptura === null) ruptura = d;
@@ -716,6 +724,21 @@ function recalc(){
 
   document.getElementById('statFinal').innerHTML = fmt(serie[30],0) + '<small>t</small>';
 
+  const statFinalNote = document.getElementById('statFinalNote');
+  const statFinalCard = document.getElementById('statFinalCard');
+  if(ruptura !== null){
+    statFinalNote.textContent = `⚠ zera em ${ruptura} dia${ruptura>1?'s':''} (a partir de hoje)`;
+    statFinalNote.className = 'stat-note warn';
+    statFinalCard.style.setProperty('--stat-color', 'var(--danger)');
+  } else if(diaEstouro !== null){
+    statFinalNote.textContent = `atinge o máximo em ${diaEstouro} dia${diaEstouro>1?'s':''} (a partir de hoje)`;
+    statFinalNote.className = 'stat-note info';
+    statFinalCard.style.setProperty('--stat-color', 'var(--gold)');
+  } else {
+    statFinalNote.textContent = '';
+    statFinalCard.style.setProperty('--stat-color', 'var(--text)');
+  }
+
   document.getElementById('alertRuptura').classList.toggle('show', ruptura !== null);
   if(ruptura !== null){
     document.getElementById('alertRuptura').textContent = `⚠ Estoque projetado chega a zero no dia ${ruptura}.`;
@@ -725,7 +748,7 @@ function recalc(){
   // valores para o resumo do WhatsApp
   lastResumo = {
     estoqueAtual, estoqueMax, entrada, saida, saldo,
-    estoqueDia30: serie[30], ruptura, janela, mediaDiasUsados,
+    estoqueDia30: serie[30], ruptura, diaEstouro, janela, mediaDiasUsados,
     usandoMedia: mediaEntrada !== null
   };
 }
