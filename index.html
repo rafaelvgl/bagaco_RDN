@@ -64,7 +64,8 @@ body{
       var(--bg-void);
   }
 
-  .tabs-nav{max-width:1220px;margin:0 auto 18px;display:flex;gap:8px;}
+  .topbar-shared{max-width:1220px;margin:0 auto 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .tabs-nav{display:flex;gap:8px;}
   .tab-btn{
     background:var(--bg-panel);border:1px solid var(--border);color:var(--text-mid);
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:.05em;
@@ -106,6 +107,9 @@ display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start;
 }
 @media (max-width:880px){
 #tabLiquidacoes .layout{grid-template-columns:1fr;}
+}
+#tabLiquidacoes .silo-card, #tabLiquidacoes .card, #tabLiquidacoes .summary{
+box-shadow:var(--card-shadow);
 }
 #tabLiquidacoes .silo-card{
 
@@ -375,10 +379,7 @@ margin-top:30px;text-align:center;color:var(--text-dim);font-size:11px;letter-sp
 #tabProjecao .wrap{
 max-width:1220px;margin:0 auto;
 }
-#tabProjecao .topbar{
-max-width:1220px;margin:0 auto 14px;display:flex;justify-content:flex-end;
-}
-#tabProjecao .theme-toggle{
+.theme-toggle{
 
     display:inline-flex;align-items:center;gap:7px;
     background:var(--bg-raised);border:1px solid var(--border);color:var(--text-mid);
@@ -387,10 +388,10 @@ max-width:1220px;margin:0 auto 14px;display:flex;justify-content:flex-end;
     letter-spacing:.06em;text-transform:uppercase;transition:all .12s ease;
   
 }
-#tabProjecao .theme-toggle:hover{
+.theme-toggle:hover{
 border-color:var(--steam-dim);color:var(--text);
 }
-#tabProjecao .theme-toggle svg{
+.theme-toggle svg{
 width:14px;height:14px;flex:none;
 }
 #tabProjecao .panel, #tabProjecao .stat, #tabProjecao .chart-card, #tabProjecao .hist-card{
@@ -816,12 +817,18 @@ margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-sp
 </head>
 <body>
 
-<div class="tabs-nav">
-  <button type="button" class="tab-btn active" id="tabBtnLiq">Liquidações</button>
-  <button type="button" class="tab-btn" id="tabBtnProj">Projeção 30 dias</button>
+<div class="topbar-shared">
+  <div class="tabs-nav">
+    <button type="button" class="tab-btn" id="tabBtnLiq">Liquidações</button>
+    <button type="button" class="tab-btn active" id="tabBtnProj">Projeção 30 dias</button>
+  </div>
+  <button type="button" class="theme-toggle" id="themeToggle">
+    <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+    <span id="themeLabel">Claro</span>
+  </button>
 </div>
 
-<div class="tab-panel active" id="tabLiquidacoes">
+<div class="tab-panel" id="tabLiquidacoes">
 <div class="wrap">
 
   <header>
@@ -897,18 +904,11 @@ margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-sp
 </div>
 </div>
 
-<div class="tab-panel" id="tabProjecao">
+<div class="tab-panel active" id="tabProjecao">
 <div class="config-banner" id="configBanner">
   ⚠ <strong>Supabase não configurado.</strong> Abra o arquivo HTML em um editor de texto, procure por <code>SUPABASE_URL</code> e <code>SUPABASE_KEY</code> perto do fim do arquivo, e cole as credenciais do seu projeto (botão <b>Connect</b> no topo do painel do projeto, ou Settings → API Keys). Antes disso, os dados ficam só nesta aba, sem compartilhar com outros usuários. Rode também o script <code>supabase-setup.sql</code> uma vez no SQL Editor do Supabase.
 </div>
 <div class="wrap">
-
-  <div class="topbar">
-    <button type="button" class="theme-toggle" id="themeToggle">
-      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
-      <span id="themeLabel">Claro</span>
-    </button>
-  </div>
 
   <header>
     <div class="eyebrow">Projeção de Balanço · Pátio de Bagaço</div>
@@ -1086,6 +1086,45 @@ function activateTab(name){
 }
 tabBtnLiq.addEventListener('click', ()=> activateTab('liq'));
 tabBtnProj.addEventListener('click', ()=> activateTab('proj'));
+
+/* ============================================================
+   TEMA CLARO / ESCURO (compartilhado pelas duas abas)
+   (preferência não é salva entre sessões: cada carregamento
+   parte da preferência do sistema operacional/navegador)
+   ============================================================ */
+const ICONS = {
+  sun: '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>',
+  moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>'
+};
+const themeIconEl = document.getElementById('themeIcon');
+const themeLabelEl = document.getElementById('themeLabel');
+
+function isLightThemeGlobal(){
+  return document.documentElement.getAttribute('data-theme') === 'light';
+}
+
+function paintThemeButton(){
+  const light = isLightThemeGlobal();
+  // o botão mostra o modo para o qual ele muda ao ser clicado
+  themeIconEl.innerHTML = light ? ICONS.moon : ICONS.sun;
+  themeLabelEl.textContent = light ? 'Escuro' : 'Claro';
+}
+
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  paintThemeButton();
+  // redesenha o gráfico SVG da aba de projeção com as cores do novo tema
+  if(window.__projRedraw) window.__projRedraw();
+}
+
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  setTheme(isLightThemeGlobal() ? 'dark' : 'light');
+});
+
+(function initTheme(){
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  setTheme(prefersLight ? 'light' : 'dark');
+})();
 </script>
 
 <script>
@@ -1741,39 +1780,9 @@ document.getElementById('janelaMedia').addEventListener('input', ()=>{
   await loadMediaMovel();
 })();
 
-/* ============================================================
-   TEMA CLARO / ESCURO
-   (preferência não é salva entre sessões: cada carregamento
-   parte da preferência do sistema operacional/navegador)
-   ============================================================ */
-const ICONS = {
-  sun: '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>',
-  moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>'
-};
-const themeIconEl = document.getElementById('themeIcon');
-const themeLabelEl = document.getElementById('themeLabel');
-
-function paintThemeButton(){
-  const light = isLightTheme();
-  // o botão mostra o modo para o qual ele muda ao ser clicado
-  themeIconEl.innerHTML = light ? ICONS.moon : ICONS.sun;
-  themeLabelEl.textContent = light ? 'Escuro' : 'Claro';
-}
-
-function setTheme(t){
-  document.documentElement.setAttribute('data-theme', t);
-  paintThemeButton();
-  recalc(); // redesenha o gráfico SVG com as cores do novo tema
-}
-
-document.getElementById('themeToggle').addEventListener('click', ()=>{
-  setTheme(isLightTheme() ? 'dark' : 'light');
-});
-
-(function initTheme(){
-  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-  setTheme(prefersLight ? 'light' : 'dark');
-})();
+/* expõe o recalc desta aba para o botão de tema global poder
+   redesenhar o gráfico SVG quando o tema mudar */
+window.__projRedraw = recalc;
 
 /* ============================================================
    RESUMO PARA WHATSAPP
