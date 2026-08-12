@@ -969,7 +969,7 @@ function buildResumoWhatsapp(){
     : `Entrada estimada: *${fmt(r.entrada,0)} t/dia*`;
   const rupturaLinha = r.ruptura !== null
     ? `⚠ Ruptura prevista no dia *${r.ruptura}*`
-    : '✅ Sem previsão de ruptura em 30 dias';
+    : '✅ Sem previsão de ruptura daqui 30 dias';
 
   return `*PROJEÇÃO DE ESTOQUE DE BAGAÇO*\n`
     + `Estoque atual: *${fmt(r.estoqueAtual,0)} t* de ${fmt(r.estoqueMax,0)} t máx. (${fmt(pct,0)}%)\n\n`
@@ -984,6 +984,7 @@ const btnWhatsapp = document.getElementById('btnWhatsapp');
 const btnWhatsappText = document.getElementById('btnWhatsappText');
 
 btnWhatsapp.addEventListener('click', async ()=>{
+  recalc(); // garante que o resumo reflete exatamente os valores atuais (evita defasagem)
   const text = buildResumoWhatsapp();
   if(!text) return;
   try{
