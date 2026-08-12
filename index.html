@@ -24,6 +24,25 @@
     --danger:#ff5468;
     --ok:#5fd68a;
     --gold:#f2c14e;
+    --card-shadow:none;
+  }
+  :root[data-theme="light"]{
+    --bg-void:#f2f0eb;
+    --bg-panel:#ffffff;
+    --bg-raised:#f1f2f5;
+    --bg-raised2:#e6e8ec;
+    --ember:#df5f1f;
+    --ember-dim:#b34e1a;
+    --steam:#0e7d92;
+    --steam-dim:#0b6272;
+    --text:#191d21;
+    --text-mid:#4c5560;
+    --text-dim:#7c8792;
+    --border:#dfe2e7;
+    --danger:#c92f47;
+    --ok:#1f8a4d;
+    --gold:#a3700f;
+    --card-shadow:0 1px 2px rgba(20,24,28,.05), 0 4px 14px rgba(20,24,28,.04);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -36,8 +55,28 @@
     font-family:'IBM Plex Mono',monospace;
     min-height:100vh;
     padding:28px 20px 60px;
+    transition:background-color .15s ease, color .15s ease;
+  }
+  :root[data-theme="light"] body{
+    background:
+      radial-gradient(ellipse 1200px 600px at 15% -10%, rgba(223,95,31,0.05), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 100% 10%, rgba(14,125,146,0.04), transparent 55%),
+      var(--bg-void);
   }
   .wrap{max-width:1220px;margin:0 auto;}
+
+  .topbar{max-width:1220px;margin:0 auto 14px;display:flex;justify-content:flex-end;}
+  .theme-toggle{
+    display:inline-flex;align-items:center;gap:7px;
+    background:var(--bg-raised);border:1px solid var(--border);color:var(--text-mid);
+    padding:7px 13px;border-radius:20px;cursor:pointer;
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
+    letter-spacing:.06em;text-transform:uppercase;transition:all .12s ease;
+  }
+  .theme-toggle:hover{border-color:var(--steam-dim);color:var(--text);}
+  .theme-toggle svg{width:14px;height:14px;flex:none;}
+
+  .panel,.stat,.chart-card,.hist-card{box-shadow:var(--card-shadow);}
 
   header{margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:18px;}
   .eyebrow{
@@ -166,6 +205,24 @@
   table.hist .pos{color:var(--ok);}
   .hist-empty{font-size:12px;color:var(--text-dim);text-align:center;padding:14px 0;}
 
+  /* ---- Compartilhar no WhatsApp ---- */
+  .share-card{
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
+    padding:18px 20px;margin-top:18px;box-shadow:var(--card-shadow);
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .share-text{font-size:12px;color:var(--text-mid);max-width:520px;line-height:1.5;}
+  .share-text b{color:var(--text);}
+  .whatsapp-btn{
+    display:flex;align-items:center;gap:9px;flex:none;
+    background:#25D366;color:#062712;border:none;border-radius:9px;
+    font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;letter-spacing:.04em;
+    text-transform:uppercase;padding:13px 20px;cursor:pointer;transition:filter .12s ease;
+  }
+  .whatsapp-btn:hover{filter:brightness(1.06);}
+  .whatsapp-btn.copied{background:var(--ok);}
+  .whatsapp-btn svg{width:18px;height:18px;flex:none;}
+
   .slider-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
   .slider-val{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:19px;}
   .slider-val small{font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:10px;color:var(--text-dim);margin-left:4px;}
@@ -246,6 +303,13 @@
   ⚠ <strong>Supabase não configurado.</strong> Abra o arquivo HTML em um editor de texto, procure por <code>SUPABASE_URL</code> e <code>SUPABASE_KEY</code> perto do fim do arquivo, e cole as credenciais do seu projeto (botão <b>Connect</b> no topo do painel do projeto, ou Settings → API Keys). Antes disso, os dados ficam só nesta aba, sem compartilhar com outros usuários. Rode também o script <code>supabase-setup.sql</code> uma vez no SQL Editor do Supabase.
 </div>
 <div class="wrap">
+
+  <div class="topbar">
+    <button type="button" class="theme-toggle" id="themeToggle">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      <span id="themeLabel">Claro</span>
+    </button>
+  </div>
 
   <header>
     <div class="eyebrow">Projeção de Balanço · Pátio de Bagaço</div>
@@ -388,6 +452,14 @@
 
   </div>
 
+  <div class="share-card">
+    <div class="share-text">Gera um resumo simples e direto da projeção atual — <b>estoque, entrada média, saída e saldo diário</b> — pronto para colar numa conversa do WhatsApp.</div>
+    <button type="button" class="whatsapp-btn" id="btnWhatsapp">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91C21.96 6.45 17.5 2 12.04 2m0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.23 8.23 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.55-3.7 8.24-8.24 8.24m4.52-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.13-.17.24-.64.81-.78.97-.15.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.24-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.24-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.24-.86.85-.86 2.06 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.55.1.47-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.29"/></svg>
+      <span id="btnWhatsappText">Copiar resumo para WhatsApp</span>
+    </button>
+  </div>
+
   <footer>Modelo: estoque(dia) = estoque(dia−1) + entrada média móvel (últimos N dias de lançamentos) − saída diária (carretas × densidade), limitado entre 0 e o estoque máximo.</footer>
 </div>
 
@@ -483,8 +555,25 @@ function niceMax(v){
   return step * mag;
 }
 
+function isLightTheme(){
+  return document.documentElement.getAttribute('data-theme') === 'light';
+}
+
+function chartPalette(){
+  const light = isLightTheme();
+  return {
+    grid: light ? 'rgba(20,24,28,0.08)' : 'rgba(255,255,255,0.06)',
+    axisText: light ? '#4c5560' : '#6d7885',
+    dashedMax: light ? 'rgba(14,125,146,0.55)' : 'rgba(143,214,232,0.6)',
+    areaFill: light ? 'rgba(223,95,31,0.10)' : 'rgba(255,122,69,0.12)',
+    line: light ? '#df5f1f' : '#ff7a45',
+    rupture: light ? 'rgba(201,47,71,0.55)' : 'rgba(255,84,104,0.5)'
+  };
+}
+
 function drawChart(serie, estoqueMax, ruptura){
   svg.innerHTML = '';
+  const pal = chartPalette();
   const n = serie.length; // 31 points (day 0..30)
   const dataMax = Math.max(...serie, estoqueMax, 1);
   const yMax = niceMax(dataMax * 1.08);
@@ -496,8 +585,8 @@ function drawChart(serie, estoqueMax, ruptura){
   for(let i=0;i<=ticks;i++){
     const val = (yMax/ticks)*i;
     const gy = y(val);
-    svg.appendChild(svgEl('line', {x1:PAD.l, x2:VB_W-PAD.r, y1:gy, y2:gy, stroke:'rgba(255,255,255,0.06)', 'stroke-width':1}));
-    const lbl = svgEl('text', {x:PAD.l-8, y:gy+3, fill:'#6d7885', 'font-size':10, 'font-family':'IBM Plex Mono', 'text-anchor':'end'});
+    svg.appendChild(svgEl('line', {x1:PAD.l, x2:VB_W-PAD.r, y1:gy, y2:gy, stroke:pal.grid, 'stroke-width':1}));
+    const lbl = svgEl('text', {x:PAD.l-8, y:gy+3, fill:pal.axisText, 'font-size':10, 'font-family':'IBM Plex Mono', 'text-anchor':'end'});
     lbl.textContent = fmt(val,0);
     svg.appendChild(lbl);
   }
@@ -505,7 +594,7 @@ function drawChart(serie, estoqueMax, ruptura){
   // x labels (every ~5 days)
   for(let i=0;i<n;i++){
     if(i % 5 === 0 || i === n-1){
-      const lbl = svgEl('text', {x:x(i), y:VB_H-8, fill:'#6d7885', 'font-size':10, 'font-family':'IBM Plex Mono', 'text-anchor':'middle'});
+      const lbl = svgEl('text', {x:x(i), y:VB_H-8, fill:pal.axisText, 'font-size':10, 'font-family':'IBM Plex Mono', 'text-anchor':'middle'});
       lbl.textContent = i===0 ? 'Hoje' : 'D'+i;
       svg.appendChild(lbl);
     }
@@ -513,29 +602,29 @@ function drawChart(serie, estoqueMax, ruptura){
 
   // estoque máximo dashed line
   const gyMax = y(estoqueMax);
-  svg.appendChild(svgEl('line', {x1:PAD.l, x2:VB_W-PAD.r, y1:gyMax, y2:gyMax, stroke:'rgba(143,214,232,0.6)', 'stroke-width':1.5, 'stroke-dasharray':'6,5'}));
+  svg.appendChild(svgEl('line', {x1:PAD.l, x2:VB_W-PAD.r, y1:gyMax, y2:gyMax, stroke:pal.dashedMax, 'stroke-width':1.5, 'stroke-dasharray':'6,5'}));
 
   // area fill
   let areaPath = `M ${x(0)} ${y(serie[0])} `;
   for(let i=1;i<n;i++) areaPath += `L ${x(i)} ${y(serie[i])} `;
   areaPath += `L ${x(n-1)} ${y(0)} L ${x(0)} ${y(0)} Z`;
-  svg.appendChild(svgEl('path', {d:areaPath, fill:'rgba(255,122,69,0.12)', stroke:'none'}));
+  svg.appendChild(svgEl('path', {d:areaPath, fill:pal.areaFill, stroke:'none'}));
 
   // line path
   let linePath = `M ${x(0)} ${y(serie[0])} `;
   for(let i=1;i<n;i++) linePath += `L ${x(i)} ${y(serie[i])} `;
-  svg.appendChild(svgEl('path', {d:linePath, fill:'none', stroke:'#ff7a45', 'stroke-width':2.5, 'stroke-linejoin':'round', 'stroke-linecap':'round'}));
+  svg.appendChild(svgEl('path', {d:linePath, fill:'none', stroke:pal.line, 'stroke-width':2.5, 'stroke-linejoin':'round', 'stroke-linecap':'round'}));
 
   // rupture marker
   if(ruptura !== null){
-    svg.appendChild(svgEl('line', {x1:x(ruptura), x2:x(ruptura), y1:PAD.t, y2:VB_H-PAD.b, stroke:'rgba(255,84,104,0.5)', 'stroke-width':1, 'stroke-dasharray':'3,4'}));
+    svg.appendChild(svgEl('line', {x1:x(ruptura), x2:x(ruptura), y1:PAD.t, y2:VB_H-PAD.b, stroke:pal.rupture, 'stroke-width':1, 'stroke-dasharray':'3,4'}));
   }
 
   // points + hover columns
   const colW = (VB_W - PAD.l - PAD.r) / (n-1);
   for(let i=0;i<n;i++){
     const cx = x(i), cy = y(serie[i]);
-    const dot = svgEl('circle', {class:'pt', cx, cy, r:2.5, fill:'#ff7a45'});
+    const dot = svgEl('circle', {class:'pt', cx, cy, r:2.5, fill:pal.line});
     svg.appendChild(dot);
 
     const hitX = cx - colW/2;
@@ -566,6 +655,7 @@ function hideTooltip(){ tooltip.classList.remove('show'); }
 let currentSerie = [], currentEstoqueMax = 0;
 let mediaEntrada = null;      // t/dia, calculada a partir do histórico (Supabase)
 let mediaDiasUsados = 0;
+let lastResumo = null;
 
 function recalc(){
   const estoqueAtual = parseFloat(els.estoqueAtual.value) || 0;
@@ -631,6 +721,13 @@ function recalc(){
     document.getElementById('alertRuptura').textContent = `⚠ Estoque projetado chega a zero no dia ${ruptura}.`;
   }
   document.getElementById('alertEstouro').classList.toggle('show', estouro);
+
+  // valores para o resumo do WhatsApp
+  lastResumo = {
+    estoqueAtual, estoqueMax, entrada, saida, saldo,
+    estoqueDia30: serie[30], ruptura, janela, mediaDiasUsados,
+    usandoMedia: mediaEntrada !== null
+  };
 }
 
 document.addEventListener('input', recalc);
@@ -649,13 +746,16 @@ if(!SB_READY){
   document.getElementById('configBanner').classList.add('show');
 }
 
-// ---- Parâmetros compartilhados (estoque atual/máximo, massa, carretas, densidade) ----
+// ---- Parâmetros compartilhados (estoque atual/máximo, massa, carretas, densidade, janela) ----
+const janelaEl = document.getElementById('janelaMedia');
+
 function applyParametros(p){
   els.estoqueAtual.value = p.estoque_atual;
   els.estoqueMax.value = p.estoque_max;
   els.massaConcha.value = p.massa_concha;
   els.carretas.value = p.carretas_dia;
   els.densidade.value = p.densidade_carreta;
+  if(p.media_movel_dias) janelaEl.value = p.media_movel_dias;
   recalc();
 }
 
@@ -679,6 +779,7 @@ function scheduleSaveParametros(){
         massa_concha: parseFloat(els.massaConcha.value) || 0,
         carretas_dia: parseFloat(els.carretas.value) || 0,
         densidade_carreta: parseFloat(els.densidade.value) || 0,
+        media_movel_dias: parseInt(janelaEl.value) || 3,
         updated_at: new Date().toISOString()
       });
       setStatus('Parâmetros salvos ✓', 'ok');
@@ -686,7 +787,7 @@ function scheduleSaveParametros(){
     }catch(e){ console.error(e); setStatus('Erro ao salvar parâmetros', 'err'); }
   }, 700);
 }
-[els.estoqueAtual, els.estoqueMax, els.massaConcha, els.carretas, els.densidade].forEach(el=>{
+[els.estoqueAtual, els.estoqueMax, els.massaConcha, els.carretas, els.densidade, janelaEl].forEach(el=>{
   el.addEventListener('change', scheduleSaveParametros);
 });
 
@@ -821,6 +922,82 @@ document.getElementById('janelaMedia').addEventListener('input', ()=>{
   await loadHistorico();
   await loadMediaMovel();
 })();
+
+/* ============================================================
+   TEMA CLARO / ESCURO
+   (preferência não é salva entre sessões: cada carregamento
+   parte da preferência do sistema operacional/navegador)
+   ============================================================ */
+const ICONS = {
+  sun: '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>',
+  moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>'
+};
+const themeIconEl = document.getElementById('themeIcon');
+const themeLabelEl = document.getElementById('themeLabel');
+
+function paintThemeButton(){
+  const light = isLightTheme();
+  // o botão mostra o modo para o qual ele muda ao ser clicado
+  themeIconEl.innerHTML = light ? ICONS.moon : ICONS.sun;
+  themeLabelEl.textContent = light ? 'Escuro' : 'Claro';
+}
+
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  paintThemeButton();
+  recalc(); // redesenha o gráfico SVG com as cores do novo tema
+}
+
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  setTheme(isLightTheme() ? 'dark' : 'light');
+});
+
+(function initTheme(){
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  setTheme(prefersLight ? 'light' : 'dark');
+})();
+
+/* ============================================================
+   RESUMO PARA WHATSAPP
+   ============================================================ */
+function buildResumoWhatsapp(){
+  if(!lastResumo) return '';
+  const r = lastResumo;
+  const pct = r.estoqueMax > 0 ? (r.estoqueAtual / r.estoqueMax * 100) : 0;
+  const entradaLabel = r.usandoMedia
+    ? `Entrada média (últ. ${r.mediaDiasUsados}d): *${fmt(r.entrada,0)} t/dia*`
+    : `Entrada estimada: *${fmt(r.entrada,0)} t/dia*`;
+  const rupturaLinha = r.ruptura !== null
+    ? `⚠ Ruptura prevista no dia *${r.ruptura}*`
+    : '✅ Sem previsão de ruptura em 30 dias';
+
+  return `*PROJEÇÃO DE ESTOQUE DE BAGAÇO*\n`
+    + `Estoque atual: *${fmt(r.estoqueAtual,0)} t* de ${fmt(r.estoqueMax,0)} t máx. (${fmt(pct,0)}%)\n\n`
+    + `${entradaLabel}\n`
+    + `Saída diária: *${fmt(r.saida,0)} t/dia*\n`
+    + `Saldo diário: *${(r.saldo>=0?'+':'')}${fmt(r.saldo,0)} t/dia*\n\n`
+    + `Estoque projetado (dia 30): *${fmt(r.estoqueDia30,0)} t*\n`
+    + `${rupturaLinha}`;
+}
+
+const btnWhatsapp = document.getElementById('btnWhatsapp');
+const btnWhatsappText = document.getElementById('btnWhatsappText');
+
+btnWhatsapp.addEventListener('click', async ()=>{
+  const text = buildResumoWhatsapp();
+  if(!text) return;
+  try{
+    await navigator.clipboard.writeText(text);
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+  btnWhatsapp.classList.add('copied');
+  btnWhatsappText.textContent = 'Copiado!';
+  setTimeout(()=>{ btnWhatsapp.classList.remove('copied'); btnWhatsappText.textContent = 'Copiar resumo para WhatsApp'; }, 1800);
+});
+
 </script>
 </body>
 </html>
