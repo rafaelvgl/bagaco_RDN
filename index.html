@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Projeção de Estoque de Bagaço — 30 dias</title>
+<title>Bagaço — Liquidações &amp; Projeção de Estoque</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{
+:root{
     --bg-void:#0a0c0e;
     --bg-panel:#12161b;
     --bg-raised:#191f26;
@@ -26,7 +26,7 @@
     --gold:#f2c14e;
     --card-shadow:none;
   }
-  :root[data-theme="light"]{
+:root[data-theme="light"]{
     --bg-void:#f2f0eb;
     --bg-panel:#ffffff;
     --bg-raised:#f1f2f5;
@@ -44,9 +44,9 @@
     --gold:#a3700f;
     --card-shadow:0 1px 2px rgba(20,24,28,.05), 0 4px 14px rgba(20,24,28,.04);
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
     background:
       radial-gradient(ellipse 1200px 600px at 15% -10%, rgba(255,122,69,0.07), transparent 60%),
       radial-gradient(ellipse 900px 500px at 100% 10%, rgba(143,214,232,0.05), transparent 55%),
@@ -57,251 +57,847 @@
     padding:28px 20px 60px;
     transition:background-color .15s ease, color .15s ease;
   }
-  :root[data-theme="light"] body{
+:root[data-theme="light"] body{
     background:
       radial-gradient(ellipse 1200px 600px at 15% -10%, rgba(223,95,31,0.05), transparent 60%),
       radial-gradient(ellipse 900px 500px at 100% 10%, rgba(14,125,146,0.04), transparent 55%),
       var(--bg-void);
   }
-  .wrap{max-width:1220px;margin:0 auto;}
 
-  .topbar{max-width:1220px;margin:0 auto 14px;display:flex;justify-content:flex-end;}
-  .theme-toggle{
+  .tabs-nav{max-width:1220px;margin:0 auto 18px;display:flex;gap:8px;}
+  .tab-btn{
+    background:var(--bg-panel);border:1px solid var(--border);color:var(--text-mid);
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:14px;letter-spacing:.05em;
+    text-transform:uppercase;padding:11px 20px;border-radius:9px 9px 0 0;cursor:pointer;
+    transition:all .12s ease;border-bottom:none;position:relative;top:1px;
+  }
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{background:var(--bg-void);color:var(--ember);border-bottom:2px solid var(--bg-void);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+/* ===== Aba: Liquidações ===== */
+#tabLiquidacoes .wrap{
+max-width:1180px;margin:0 auto;
+}
+#tabLiquidacoes header{
+margin-bottom:26px;border-bottom:1px solid var(--border);padding-bottom:18px;
+}
+#tabLiquidacoes .eyebrow{
+
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:12px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--ember);font-weight:600;margin-bottom:6px;
+  
+}
+#tabLiquidacoes h1{
+
+    font-family:'Barlow Condensed',sans-serif;
+    font-weight:800;font-size:clamp(28px,4vw,42px);
+    letter-spacing:.01em;margin:0 0 6px;color:var(--text);
+    text-transform:uppercase;
+  
+}
+#tabLiquidacoes .sub{
+color:var(--text-mid);font-size:13px;max-width:640px;line-height:1.5;
+}
+#tabLiquidacoes .layout{
+display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start;
+}
+@media (max-width:880px){
+#tabLiquidacoes .layout{grid-template-columns:1fr;}
+}
+#tabLiquidacoes .silo-card{
+
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
+    padding:20px 20px 22px;position:sticky;top:20px;
+  
+}
+#tabLiquidacoes .label{
+
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--text-mid);margin-bottom:10px;
+  
+}
+#tabLiquidacoes input[type=number]{
+
+    width:100%;background:var(--bg-raised);border:1px solid var(--border);
+    color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;
+    padding:10px 12px;border-radius:7px;outline:none;
+  
+}
+#tabLiquidacoes input[type=number]:focus{
+border-color:var(--ember-dim);
+}
+#tabLiquidacoes .unit{
+font-size:11px;color:var(--text-dim);margin-top:5px;letter-spacing:.04em;
+}
+#tabLiquidacoes .silo-visual{
+
+    margin:22px auto 6px;width:96px;height:230px;position:relative;
+  
+}
+#tabLiquidacoes .silo-body{
+
+    position:absolute;inset:0;
+    background:var(--bg-raised);
+    border:2px solid var(--border);
+    border-radius:8px 8px 4px 4px;
+    overflow:hidden;
+  
+}
+#tabLiquidacoes .silo-fill{
+
+    position:absolute;left:0;right:0;bottom:0;
+    background:linear-gradient(180deg, var(--ember) 0%, var(--ember-dim) 100%);
+    transition:height .35s ease;
+    box-shadow: inset 0 3px 8px rgba(0,0,0,.25);
+  
+}
+#tabLiquidacoes .silo-fill::before{
+
+    content:'';position:absolute;top:0;left:0;right:0;height:6px;
+    background:rgba(255,255,255,.18);
+  
+}
+#tabLiquidacoes .silo-ticks{
+position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:6px 0;pointer-events:none;
+}
+#tabLiquidacoes .silo-ticks span{
+height:1px;background:rgba(255,255,255,.06);
+}
+#tabLiquidacoes .silo-pct{
+
+    text-align:center;margin-top:10px;font-family:'Barlow Condensed',sans-serif;
+    font-weight:800;font-size:26px;color:var(--ember);
+  
+}
+#tabLiquidacoes .silo-pct small{
+display:block;font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:10px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;
+}
+#tabLiquidacoes .slider-block{
+margin-top:22px;padding-top:18px;border-top:1px solid var(--border);
+}
+#tabLiquidacoes .slider-row{
+display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;
+}
+#tabLiquidacoes .slider-val{
+
+    font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:var(--steam);
+  
+}
+#tabLiquidacoes .slider-val small{
+font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:10px;color:var(--text-dim);
+}
+#tabLiquidacoes input[type=range]{
+
+    -webkit-appearance:none;width:100%;height:5px;border-radius:3px;
+    background:linear-gradient(90deg, var(--steam-dim), var(--steam));
+    outline:none;margin-top:4px;
+  
+}
+#tabLiquidacoes input[type=range]::-webkit-slider-thumb{
+
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--steam);border:3px solid var(--bg-void);cursor:pointer;
+    box-shadow:0 0 0 1px var(--steam);
+  
+}
+#tabLiquidacoes input[type=range]::-moz-range-thumb{
+
+    width:14px;height:14px;border-radius:50%;background:var(--steam);
+    border:3px solid var(--bg-void);cursor:pointer;
+  
+}
+#tabLiquidacoes .range-labels{
+display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-top:4px;
+}
+#tabLiquidacoes .grid{
+display:grid;grid-template-columns:1fr 1fr;gap:16px;
+}
+@media (max-width:640px){
+#tabLiquidacoes .grid{grid-template-columns:1fr;}
+}
+#tabLiquidacoes .card{
+
+    background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
+    padding:18px 18px 16px;position:relative;overflow:hidden;
+  
+}
+#tabLiquidacoes .card::before{
+
+    content:'';position:absolute;top:0;left:0;bottom:0;width:3px;
+    background:var(--tag-color,var(--ember));
+  
+}
+#tabLiquidacoes .card-head{
+display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;
+}
+#tabLiquidacoes .tag{
+
+    font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;
+    letter-spacing:.06em;color:var(--tag-color,var(--ember));
+    display:flex;align-items:center;gap:8px;
+  
+}
+#tabLiquidacoes .tag .dot{
+width:8px;height:8px;border-radius:50%;background:var(--tag-color,var(--ember));
+}
+#tabLiquidacoes input[type=text].name-input{
+
+    background:transparent;border:none;color:var(--text-mid);font-family:'IBM Plex Mono',monospace;
+    font-size:11px;text-align:right;width:120px;outline:none;border-bottom:1px dashed transparent;
+  
+}
+#tabLiquidacoes input[type=text].name-input:focus{
+border-bottom-color:var(--text-dim);
+}
+#tabLiquidacoes .inputs-row{
+display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;
+}
+#tabLiquidacoes .field label{
+display:block;font-size:10px;color:var(--text-dim);letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;
+}
+#tabLiquidacoes .field input{
+
+    width:100%;background:var(--bg-raised);border:1px solid var(--border);
+    color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;
+    padding:7px 9px;border-radius:6px;outline:none;
+  
+}
+#tabLiquidacoes .field input:focus{
+border-color:var(--tag-color,var(--ember-dim));
+}
+#tabLiquidacoes .divider{
+height:1px;background:var(--border);margin:12px 0;
+}
+#tabLiquidacoes .result-line{
+display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--text-mid);margin-bottom:6px;
+}
+#tabLiquidacoes .result-line b{
+color:var(--text);font-weight:600;
+}
+#tabLiquidacoes .headline{
+
+    margin-top:10px;padding-top:12px;border-top:1px solid var(--border);
+    display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
+  
+}
+#tabLiquidacoes .headline .num{
+
+    font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:40px;
+    color:var(--tag-color,var(--ember));line-height:.85;
+  
+}
+#tabLiquidacoes .headline .num small{
+font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:11px;color:var(--text-dim);display:block;margin-top:4px;text-transform:uppercase;letter-spacing:.06em;
+}
+#tabLiquidacoes .rods{
+display:flex;gap:3px;flex-wrap:wrap;max-width:110px;justify-content:flex-end;align-content:flex-end;
+}
+#tabLiquidacoes .rod{
+width:7px;height:16px;border-radius:1px;background:var(--tag-color,var(--ember));opacity:.9;
+}
+#tabLiquidacoes .rod.partial{
+opacity:.35;
+}
+#tabLiquidacoes .exceed{
+margin-top:8px;font-size:11px;color:var(--danger);display:none;
+}
+#tabLiquidacoes .exceed.show{
+display:block;
+}
+#tabLiquidacoes .summary{
+
+    margin-top:24px;background:var(--bg-panel);border:1px solid var(--border);
+    border-radius:10px;padding:18px 20px 20px;
+  
+}
+#tabLiquidacoes .summary-head{
+display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;
+}
+#tabLiquidacoes .summary-head .label{
+margin:0;
+}
+#tabLiquidacoes .copy-btn{
+
+    display:flex;align-items:center;gap:7px;
+    background:var(--bg-raised2);border:1px solid var(--border);color:var(--text);
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.05em;
+    text-transform:uppercase;padding:9px 14px;border-radius:7px;cursor:pointer;
+    transition:background .15s ease, border-color .15s ease;
+  
+}
+#tabLiquidacoes .copy-btn:hover{
+background:#242d37;border-color:var(--ok);
+}
+#tabLiquidacoes .copy-btn.copied{
+border-color:var(--ok);color:var(--ok);
+}
+#tabLiquidacoes .copy-btn svg{
+width:14px;height:14px;flex:none;
+}
+#tabLiquidacoes table.resumo{
+width:100%;border-collapse:collapse;font-size:12px;
+}
+#tabLiquidacoes table.resumo th{
+
+    text-align:left;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);
+    padding:8px 10px;border-bottom:1px solid var(--border);
+  
+}
+#tabLiquidacoes table.resumo td{
+padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text-mid);
+}
+#tabLiquidacoes table.resumo td.strong{
+color:var(--text);font-weight:600;
+}
+#tabLiquidacoes table.resumo tr:last-child td{
+border-bottom:none;
+}
+#tabLiquidacoes table.resumo td.name{
+display:flex;align-items:center;gap:7px;color:var(--text);font-weight:600;
+}
+#tabLiquidacoes table.resumo td.name .dot{
+width:7px;height:7px;border-radius:50%;flex:none;
+}
+#tabLiquidacoes table.resumo{
+margin-top:2px;
+}
+#tabLiquidacoes .summary-foot{
+margin-top:12px;font-size:11px;color:var(--text-dim);
+}
+#tabLiquidacoes footer{
+margin-top:30px;text-align:center;color:var(--text-dim);font-size:11px;letter-spacing:.04em;
+}
+/* ===== Aba: Projeção 30 dias ===== */
+#tabProjecao .wrap{
+max-width:1220px;margin:0 auto;
+}
+#tabProjecao .topbar{
+max-width:1220px;margin:0 auto 14px;display:flex;justify-content:flex-end;
+}
+#tabProjecao .theme-toggle{
+
     display:inline-flex;align-items:center;gap:7px;
     background:var(--bg-raised);border:1px solid var(--border);color:var(--text-mid);
     padding:7px 13px;border-radius:20px;cursor:pointer;
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
     letter-spacing:.06em;text-transform:uppercase;transition:all .12s ease;
-  }
-  .theme-toggle:hover{border-color:var(--steam-dim);color:var(--text);}
-  .theme-toggle svg{width:14px;height:14px;flex:none;}
+  
+}
+#tabProjecao .theme-toggle:hover{
+border-color:var(--steam-dim);color:var(--text);
+}
+#tabProjecao .theme-toggle svg{
+width:14px;height:14px;flex:none;
+}
+#tabProjecao .panel, #tabProjecao .stat, #tabProjecao .chart-card, #tabProjecao .hist-card{
+box-shadow:var(--card-shadow);
+}
+#tabProjecao header{
+margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:18px;
+}
+#tabProjecao .eyebrow{
 
-  .panel,.stat,.chart-card,.hist-card{box-shadow:var(--card-shadow);}
-
-  header{margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:18px;}
-  .eyebrow{
     font-family:'Barlow Condensed',sans-serif;
     font-size:12px;letter-spacing:.28em;text-transform:uppercase;
     color:var(--steam);font-weight:600;margin-bottom:6px;
-  }
-  h1{
+  
+}
+#tabProjecao h1{
+
     font-family:'Barlow Condensed',sans-serif;
     font-weight:800;font-size:clamp(26px,3.6vw,38px);
     letter-spacing:.01em;margin:0 0 6px;color:var(--text);
     text-transform:uppercase;
-  }
-  .sub{color:var(--text-mid);font-size:13px;max-width:680px;line-height:1.5;}
+  
+}
+#tabProjecao .sub{
+color:var(--text-mid);font-size:13px;max-width:680px;line-height:1.5;
+}
+#tabProjecao .layout{
+display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start;
+}
+#tabProjecao .panel{
 
-  .layout{display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start;}
-
-  .panel{
     background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
     padding:20px;
-  }
-  .sticky{position:sticky;top:20px;}
+  
+}
+#tabProjecao .sticky{
+position:sticky;top:20px;
+}
+@media (max-width:900px){
+#tabProjecao .layout{grid-template-columns:1fr;}
+#tabProjecao .sticky{position:static !important;top:auto;}
+}
+#tabProjecao .label{
 
-  @media (max-width:900px){
-    .layout{grid-template-columns:1fr;}
-    .sticky{position:static !important;top:auto;}
-  }
-
-  .label{
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
     letter-spacing:.1em;text-transform:uppercase;color:var(--text-mid);margin-bottom:8px;
-  }
-  .group{margin-bottom:20px;}
-  .group:last-child{margin-bottom:0;}
-  .group-title{
+  
+}
+#tabProjecao .group{
+margin-bottom:20px;
+}
+#tabProjecao .group:last-child{
+margin-bottom:0;
+}
+#tabProjecao .group-title{
+
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.08em;
     text-transform:uppercase;color:var(--steam);margin-bottom:12px;padding-top:14px;border-top:1px solid var(--border);
-  }
-  .group:first-child .group-title{border-top:none;padding-top:0;}
+  
+}
+#tabProjecao .group:first-child .group-title{
+border-top:none;padding-top:0;
+}
+#tabProjecao input[type=number]{
 
-  input[type=number]{
     width:100%;background:var(--bg-raised);border:1px solid var(--border);
     color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;
     padding:9px 11px;border-radius:7px;outline:none;
-  }
-  input[type=number]:focus{border-color:var(--steam-dim);}
-  .unit{font-size:10px;color:var(--text-dim);margin-top:4px;letter-spacing:.04em;}
+  
+}
+#tabProjecao input[type=number]:focus{
+border-color:var(--steam-dim);
+}
+#tabProjecao .unit{
+font-size:10px;color:var(--text-dim);margin-top:4px;letter-spacing:.04em;
+}
+#tabProjecao .conchas-row{
+display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+}
+#tabProjecao .concha-field{
+text-align:center;
+}
+#tabProjecao .concha-field label{
 
-  .conchas-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-  .concha-field{text-align:center;}
-  .concha-field label{
     display:block;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:13px;
     margin-bottom:6px;color:var(--tag-color);
-  }
-  .concha-field input{text-align:center;padding:8px 4px;font-size:15px;}
-  .concha-field.a{--tag-color:#ff7a45;}
-  .concha-field.b{--tag-color:#8fd6e8;}
-  .concha-field.c{--tag-color:#f2c14e;}
+  
+}
+#tabProjecao .concha-field input{
+text-align:center;padding:8px 4px;font-size:15px;
+}
+#tabProjecao .concha-field.a{
+--tag-color:#ff7a45;
+}
+#tabProjecao .concha-field.b{
+--tag-color:#8fd6e8;
+}
+#tabProjecao .concha-field.c{
+--tag-color:#f2c14e;
+}
+#tabProjecao .config-banner{
 
-  /* ---- Config banner ---- */
-  .config-banner{
     display:none;max-width:1220px;margin:0 auto 18px;background:rgba(255,84,104,.08);
     border:1px solid var(--danger);color:var(--danger);border-radius:9px;
     padding:12px 16px;font-size:12px;line-height:1.5;
-  }
-  .config-banner.show{display:block;}
-  .config-banner code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;}
+  
+}
+#tabProjecao .config-banner.show{
+display:block;
+}
+#tabProjecao .config-banner code{
+background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px;
+}
+#tabProjecao .concha-line{
+display:flex;align-items:center;gap:8px;margin-bottom:10px;
+}
+#tabProjecao .concha-line:last-of-type{
+margin-bottom:0;
+}
+#tabProjecao .concha-name{
 
-  /* ---- Registro diário / toggle de sinal ---- */
-  .concha-line{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-  .concha-line:last-of-type{margin-bottom:0;}
-  .concha-name{
     width:24px;flex:none;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;
     text-align:center;color:var(--cl-color,var(--text));
-  }
-  .concha-line input[type=number]{flex:1;min-width:0;text-align:center;padding:10px 6px;font-size:16px;}
-  .sign-btn{
+  
+}
+#tabProjecao .concha-line input[type=number]{
+flex:1;min-width:0;text-align:center;padding:10px 6px;font-size:16px;
+}
+#tabProjecao .sign-btn{
+
     flex:none;width:46px;height:42px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;
     font-weight:800;font-size:19px;cursor:pointer;background:var(--bg-raised);
     border:1.5px solid var(--border);color:var(--text-dim);transition:all .12s ease;
     display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;
-  }
-  .sign-btn.pos{border-color:var(--ok);color:var(--ok);background:rgba(95,214,138,.1);}
-  .sign-btn.neg{border-color:var(--danger);color:var(--danger);background:rgba(255,84,104,.1);}
-  .sign-hint{font-size:10px;color:var(--text-dim);margin:2px 0 12px;text-align:center;}
+  
+}
+#tabProjecao .sign-btn.pos{
+border-color:var(--ok);color:var(--ok);background:rgba(95,214,138,.1);
+}
+#tabProjecao .sign-btn.neg{
+border-color:var(--danger);color:var(--danger);background:rgba(255,84,104,.1);
+}
+#tabProjecao .sign-hint{
+font-size:10px;color:var(--text-dim);margin:2px 0 12px;text-align:center;
+}
+#tabProjecao .reg-date{
+margin-bottom:10px;
+}
+#tabProjecao .reg-date input[type=date]{
 
-  .reg-date{margin-bottom:10px;}
-  .reg-date input[type=date]{
     width:100%;background:var(--bg-raised);border:1px solid var(--border);color:var(--text);
     font-family:'IBM Plex Mono',monospace;font-size:13px;padding:8px 10px;border-radius:7px;outline:none;
-  }
-  .btn-primary{
+  
+}
+#tabProjecao .btn-primary{
+
     width:100%;background:var(--ember);color:#1a0d06;border:none;border-radius:8px;
     font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;letter-spacing:.05em;
     text-transform:uppercase;padding:12px;cursor:pointer;transition:filter .12s ease;
-  }
-  .btn-primary:hover{filter:brightness(1.08);}
-  .btn-primary:disabled{opacity:.5;cursor:default;}
-  .save-status{font-size:11px;color:var(--text-dim);margin-top:8px;text-align:center;min-height:14px;}
-  .save-status.ok{color:var(--ok);}
-  .save-status.err{color:var(--danger);}
+  
+}
+#tabProjecao .btn-primary:hover{
+filter:brightness(1.08);
+}
+#tabProjecao .btn-primary:disabled{
+opacity:.5;cursor:default;
+}
+#tabProjecao .save-status{
+font-size:11px;color:var(--text-dim);margin-top:8px;text-align:center;min-height:14px;
+}
+#tabProjecao .save-status.ok{
+color:var(--ok);
+}
+#tabProjecao .save-status.err{
+color:var(--danger);
+}
+#tabProjecao .hist-card{
 
-  /* ---- Histórico ---- */
-  .hist-card{
     background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
     padding:18px 20px 16px;
-  }
-  .hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-  .btn-ghost{
+  
+}
+#tabProjecao .hist-head{
+display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;
+}
+#tabProjecao .btn-ghost{
+
     background:var(--bg-raised2);border:1px solid var(--border);color:var(--text-mid);
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.05em;
     text-transform:uppercase;padding:7px 12px;border-radius:7px;cursor:pointer;
-  }
-  .btn-ghost:hover{border-color:var(--steam-dim);color:var(--text);}
-  table.hist{width:100%;border-collapse:collapse;font-size:12px;}
-  table.hist th{
+  
+}
+#tabProjecao .btn-ghost:hover{
+border-color:var(--steam-dim);color:var(--text);
+}
+#tabProjecao table.hist{
+width:100%;border-collapse:collapse;font-size:12px;
+}
+#tabProjecao table.hist th{
+
     text-align:left;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:11px;
     letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);
     padding:7px 9px;border-bottom:1px solid var(--border);
-  }
-  table.hist td{padding:8px 9px;border-bottom:1px solid var(--border);color:var(--text-mid);}
-  table.hist tr:last-child td{border-bottom:none;}
-  table.hist td.date{color:var(--text);font-weight:600;white-space:nowrap;}
-  table.hist td.tot{color:var(--text);font-weight:700;}
-  table.hist .neg{color:var(--danger);}
-  table.hist .pos{color:var(--ok);}
-  .hist-empty{font-size:12px;color:var(--text-dim);text-align:center;padding:14px 0;}
+  
+}
+#tabProjecao table.hist td{
+padding:8px 9px;border-bottom:1px solid var(--border);color:var(--text-mid);
+}
+#tabProjecao table.hist tr:last-child td{
+border-bottom:none;
+}
+#tabProjecao table.hist td.date{
+color:var(--text);font-weight:600;white-space:nowrap;
+}
+#tabProjecao table.hist td.tot{
+color:var(--text);font-weight:700;
+}
+#tabProjecao table.hist .neg{
+color:var(--danger);
+}
+#tabProjecao table.hist .pos{
+color:var(--ok);
+}
+#tabProjecao .hist-empty{
+font-size:12px;color:var(--text-dim);text-align:center;padding:14px 0;
+}
+#tabProjecao .share-card{
 
-  /* ---- Compartilhar no WhatsApp ---- */
-  .share-card{
     background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
     padding:18px 20px;margin-top:18px;box-shadow:var(--card-shadow);
     display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
-  }
-  .share-text{font-size:12px;color:var(--text-mid);max-width:520px;line-height:1.5;}
-  .share-text b{color:var(--text);}
-  .whatsapp-btn{
+  
+}
+#tabProjecao .share-text{
+font-size:12px;color:var(--text-mid);max-width:520px;line-height:1.5;
+}
+#tabProjecao .share-text b{
+color:var(--text);
+}
+#tabProjecao .whatsapp-btn{
+
     display:flex;align-items:center;gap:9px;flex:none;
     background:#25D366;color:#062712;border:none;border-radius:9px;
     font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;letter-spacing:.04em;
     text-transform:uppercase;padding:13px 20px;cursor:pointer;transition:filter .12s ease;
-  }
-  .whatsapp-btn:hover{filter:brightness(1.06);}
-  .whatsapp-btn.copied{background:var(--ok);}
-  .whatsapp-btn svg{width:18px;height:18px;flex:none;}
+  
+}
+#tabProjecao .whatsapp-btn:hover{
+filter:brightness(1.06);
+}
+#tabProjecao .whatsapp-btn.copied{
+background:var(--ok);
+}
+#tabProjecao .whatsapp-btn svg{
+width:18px;height:18px;flex:none;
+}
+#tabProjecao .slider-row{
+display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;
+}
+#tabProjecao .slider-val{
+font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:19px;
+}
+#tabProjecao .slider-val small{
+font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:10px;color:var(--text-dim);margin-left:4px;
+}
+#tabProjecao input[type=range]{
 
-  .slider-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
-  .slider-val{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:19px;}
-  .slider-val small{font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:10px;color:var(--text-dim);margin-left:4px;}
-  input[type=range]{
     -webkit-appearance:none;width:100%;height:5px;border-radius:3px;outline:none;margin-top:2px;
-  }
-  input[type=range]::-webkit-slider-thumb{
+  
+}
+#tabProjecao input[type=range]::-webkit-slider-thumb{
+
     -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
     border:3px solid var(--bg-void);cursor:pointer;
-  }
-  input[type=range]::-moz-range-thumb{
+  
+}
+#tabProjecao input[type=range]::-moz-range-thumb{
+
     width:14px;height:14px;border-radius:50%;border:3px solid var(--bg-void);cursor:pointer;
-  }
-  .range-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-top:4px;}
+  
+}
+#tabProjecao .range-labels{
+display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-top:4px;
+}
+#tabProjecao #massaConcha{
+background:linear-gradient(90deg, var(--ember-dim), var(--ember));
+}
+#tabProjecao #massaConcha::-webkit-slider-thumb{
+background:var(--ember);box-shadow:0 0 0 1px var(--ember);
+}
+#tabProjecao #massaConcha::-moz-range-thumb{
+background:var(--ember);
+}
+#tabProjecao #carretas{
+background:linear-gradient(90deg, var(--steam-dim), var(--steam));
+}
+#tabProjecao #carretas::-webkit-slider-thumb{
+background:var(--steam);box-shadow:0 0 0 1px var(--steam);
+}
+#tabProjecao #carretas::-moz-range-thumb{
+background:var(--steam);
+}
+#tabProjecao #densidade{
+background:linear-gradient(90deg, #7a6ba8, var(--gold));
+}
+#tabProjecao #densidade::-webkit-slider-thumb{
+background:var(--gold);box-shadow:0 0 0 1px var(--gold);
+}
+#tabProjecao #densidade::-moz-range-thumb{
+background:var(--gold);
+}
+#tabProjecao #janelaMedia{
+background:linear-gradient(90deg, #6b4f8c, #c792ea);
+}
+#tabProjecao #janelaMedia::-webkit-slider-thumb{
+background:#c792ea;box-shadow:0 0 0 1px #c792ea;
+}
+#tabProjecao #janelaMedia::-moz-range-thumb{
+background:#c792ea;
+}
+#tabProjecao .right{
+display:flex;flex-direction:column;gap:18px;
+}
+#tabProjecao .stats-row{
+display:grid;grid-template-columns:repeat(4,1fr);gap:14px;
+}
+@media (max-width:760px){
+#tabProjecao .stats-row{grid-template-columns:1fr 1fr;}
+}
+#tabProjecao .stat{
 
-  #massaConcha{background:linear-gradient(90deg, var(--ember-dim), var(--ember));}
-  #massaConcha::-webkit-slider-thumb{background:var(--ember);box-shadow:0 0 0 1px var(--ember);}
-  #massaConcha::-moz-range-thumb{background:var(--ember);}
-  #carretas{background:linear-gradient(90deg, var(--steam-dim), var(--steam));}
-  #carretas::-webkit-slider-thumb{background:var(--steam);box-shadow:0 0 0 1px var(--steam);}
-  #carretas::-moz-range-thumb{background:var(--steam);}
-  #densidade{background:linear-gradient(90deg, #7a6ba8, var(--gold));}
-  #densidade::-webkit-slider-thumb{background:var(--gold);box-shadow:0 0 0 1px var(--gold);}
-  #densidade::-moz-range-thumb{background:var(--gold);}
-  #janelaMedia{background:linear-gradient(90deg, #6b4f8c, #c792ea);}
-  #janelaMedia::-webkit-slider-thumb{background:#c792ea;box-shadow:0 0 0 1px #c792ea;}
-  #janelaMedia::-moz-range-thumb{background:#c792ea;}
-
-  /* ---- Right side ---- */
-  .right{display:flex;flex-direction:column;gap:18px;}
-
-  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
-  @media (max-width:760px){.stats-row{grid-template-columns:1fr 1fr;}}
-  .stat{
     background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
     padding:14px 16px;position:relative;overflow:hidden;
-  }
-  .stat::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--stat-color,var(--text-dim));}
-  .stat .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
-  .stat .v{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;color:var(--stat-color,var(--text));}
-  .stat .v small{font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:11px;color:var(--text-dim);margin-left:3px;}
-  .stat-note{font-size:10.5px;margin-top:5px;color:var(--text-dim);line-height:1.4;}
-  .stat-note.warn{color:var(--danger);}
-  .stat-note.info{color:var(--gold);}
+  
+}
+#tabProjecao .stat::before{
+content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--stat-color,var(--text-dim));
+}
+#tabProjecao .stat .k{
+font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;
+}
+#tabProjecao .stat .v{
+font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:24px;color:var(--stat-color,var(--text));
+}
+#tabProjecao .stat .v small{
+font-family:'IBM Plex Mono',monospace;font-weight:400;font-size:11px;color:var(--text-dim);margin-left:3px;
+}
+#tabProjecao .stat-note{
+font-size:10.5px;margin-top:5px;color:var(--text-dim);line-height:1.4;
+}
+#tabProjecao .stat-note.warn{
+color:var(--danger);
+}
+#tabProjecao .stat-note.info{
+color:var(--gold);
+}
+#tabProjecao .chart-card{
 
-  .chart-card{
     background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
     padding:20px 20px 12px;
-  }
-  .chart-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
-  .chart-legend{display:flex;gap:16px;font-size:11px;color:var(--text-mid);}
-  .chart-legend span{display:inline-flex;align-items:center;gap:6px;}
-  .chart-legend i{width:14px;height:2px;display:inline-block;}
-  .chart-wrap{position:relative;height:360px;}
-  .chart-wrap svg{width:100%;height:100%;overflow:visible;}
-  .pt{cursor:pointer;}
-  .hover-col{fill:transparent;}
-  .hover-col:hover{fill:rgba(255,255,255,0.03);}
-  .tooltip{
+  
+}
+#tabProjecao .chart-head{
+display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;
+}
+#tabProjecao .chart-legend{
+display:flex;gap:16px;font-size:11px;color:var(--text-mid);
+}
+#tabProjecao .chart-legend span{
+display:inline-flex;align-items:center;gap:6px;
+}
+#tabProjecao .chart-legend i{
+width:14px;height:2px;display:inline-block;
+}
+#tabProjecao .chart-wrap{
+position:relative;height:360px;
+}
+#tabProjecao .chart-wrap svg{
+width:100%;height:100%;overflow:visible;
+}
+#tabProjecao .pt{
+cursor:pointer;
+}
+#tabProjecao .hover-col{
+fill:transparent;
+}
+#tabProjecao .hover-col:hover{
+fill:rgba(255,255,255,0.03);
+}
+#tabProjecao .tooltip{
+
     position:absolute;pointer-events:none;background:#0d1014;border:1px solid var(--border);
     border-radius:7px;padding:8px 11px;font-size:11px;color:var(--text);white-space:nowrap;
     transform:translate(-50%,-115%);opacity:0;transition:opacity .1s ease;z-index:5;
     box-shadow:0 6px 18px rgba(0,0,0,.4);
-  }
-  .tooltip.show{opacity:1;}
-  .tooltip .tt-day{font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--steam);letter-spacing:.04em;margin-bottom:3px;}
-  .tooltip .tt-val{color:var(--ember);font-weight:600;}
+  
+}
+#tabProjecao .tooltip.show{
+opacity:1;
+}
+#tabProjecao .tooltip .tt-day{
+font-family:'Barlow Condensed',sans-serif;font-weight:700;color:var(--steam);letter-spacing:.04em;margin-bottom:3px;
+}
+#tabProjecao .tooltip .tt-val{
+color:var(--ember);font-weight:600;
+}
+#tabProjecao .alert{
 
-  .alert{
     display:none;margin-top:12px;padding:10px 14px;border-radius:7px;font-size:12px;
     border:1px solid var(--danger);color:var(--danger);background:rgba(255,84,104,.08);
-  }
-  .alert.show{display:block;}
-  .alert.warn{border-color:var(--gold);color:var(--gold);background:rgba(242,193,78,.08);}
-
-  footer{margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-spacing:.04em;}
+  
+}
+#tabProjecao .alert.show{
+display:block;
+}
+#tabProjecao .alert.warn{
+border-color:var(--gold);color:var(--gold);background:rgba(242,193,78,.08);
+}
+#tabProjecao footer{
+margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-spacing:.04em;
+}
 </style>
 </head>
 <body>
+
+<div class="tabs-nav">
+  <button type="button" class="tab-btn active" id="tabBtnLiq">Liquidações</button>
+  <button type="button" class="tab-btn" id="tabBtnProj">Projeção 30 dias</button>
+</div>
+
+<div class="tab-panel active" id="tabLiquidacoes">
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Balanço de Combustível · Caldeiras</div>
+    <h1>Liquidações possíveis por estoque de bagaço</h1>
+    <p class="sub">Informe o estoque atual, ajuste o consumo específico (t vapor / t bagaço) e configure a duração e o consumo de vapor de cada tipo de liquidação. O painel calcula quantas liquidações de cada tipo o estoque atual sustenta.</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ESTOQUE / SILO -->
+    <div class="silo-card">
+      <div class="label">Estoque atual de bagaço</div>
+      <input type="number" id="estoque" value="2000" min="0" step="10">
+      <div class="unit">toneladas (t)</div>
+
+      <div class="label" style="margin-top:16px;">Estoque máximo (capacidade)</div>
+      <input type="number" id="estoqueMaxLiq" value="2500" min="0" step="10">
+      <div class="unit">toneladas (t)</div>
+
+      <div class="silo-visual">
+        <div class="silo-body">
+          <div class="silo-ticks">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="silo-fill" id="siloFill" style="height:60%"></div>
+        </div>
+      </div>
+      <div class="silo-pct" id="siloPct">—
+        <small>do estoque máximo</small>
+      </div>
+
+      <div class="slider-block">
+        <div class="slider-row">
+          <span class="label" style="margin:0;">Consumo específico</span>
+          <span class="slider-val" id="cespVal">2.00<small> t vapor / t bagaço</small></span>
+        </div>
+        <input type="range" id="cesp" min="1.8" max="2.3" step="0.01" value="2.0">
+        <div class="range-labels"><span>1,8</span><span>2,3</span></div>
+      </div>
+    </div>
+
+    <!-- TIPOS DE LIQUIDAÇÃO -->
+    <div class="grid" id="cardsGrid"></div>
+
+  </div>
+
+  <div class="summary">
+    <div class="summary-head">
+      <div class="label">Resumo para compartilhamento</div>
+      <button class="copy-btn" id="copyBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        <span id="copyBtnText">Copiar para WhatsApp</span>
+      </button>
+    </div>
+    <table class="resumo">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Duração</th>
+          <th>Vapor (t/h)</th>
+          <th>Bagaço/liq.</th>
+          <th>Liquidações</th>
+        </tr>
+      </thead>
+      <tbody id="resumoBody"></tbody>
+    </table>
+    <div class="summary-foot" id="summaryFoot"></div>
+  </div>
+
+  <footer>Cálculo: vapor total = duração × consumo de vapor · bagaço necessário = vapor total ÷ consumo específico · liquidações possíveis = estoque ÷ bagaço necessário (por tipo, estoque integral dedicado)</footer>
+
+</div>
+</div>
+
+<div class="tab-panel" id="tabProjecao">
 <div class="config-banner" id="configBanner">
   ⚠ <strong>Supabase não configurado.</strong> Abra o arquivo HTML em um editor de texto, procure por <code>SUPABASE_URL</code> e <code>SUPABASE_KEY</code> perto do fim do arquivo, e cole as credenciais do seu projeto (botão <b>Connect</b> no topo do painel do projeto, ou Settings → API Keys). Antes disso, os dados ficam só nesta aba, sem compartilhar com outros usuários. Rode também o script <code>supabase-setup.sql</code> uma vez no SQL Editor do Supabase.
 </div>
@@ -472,8 +1068,197 @@
 
   <footer>Modelo: estoque(dia) = estoque(dia−1) + entrada média móvel (últimos N dias de lançamentos) − saída diária (carretas × densidade), limitado entre 0 e o estoque máximo.</footer>
 </div>
+</div>
 
 <script>
+/* ---- alternância de abas ---- */
+const tabBtnLiq = document.getElementById('tabBtnLiq');
+const tabBtnProj = document.getElementById('tabBtnProj');
+const tabLiquidacoes = document.getElementById('tabLiquidacoes');
+const tabProjecao = document.getElementById('tabProjecao');
+
+function activateTab(name){
+  const liq = name === 'liq';
+  tabBtnLiq.classList.toggle('active', liq);
+  tabBtnProj.classList.toggle('active', !liq);
+  tabLiquidacoes.classList.toggle('active', liq);
+  tabProjecao.classList.toggle('active', !liq);
+}
+tabBtnLiq.addEventListener('click', ()=> activateTab('liq'));
+tabBtnProj.addEventListener('click', ()=> activateTab('proj'));
+</script>
+
+<script>
+/* ===== Aba: Liquidações (escopo isolado) ===== */
+(function(){
+
+const tipos = [
+  { id:'A', color:'#ff7a45', nome:'Liquidação A', duracao:8,  vapor:60 },
+  { id:'B', color:'#8fd6e8', nome:'Liquidação B', duracao:6,  vapor:55 },
+  { id:'C', color:'#f2c14e', nome:'Liquidação C', duracao:4,  vapor:50 },
+  { id:'D', color:'#c792ea', nome:'Liquidação D', duracao:2,  vapor:45 },
+];
+
+const grid = document.getElementById('cardsGrid');
+
+function buildCard(t){
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.style.setProperty('--tag-color', t.color);
+  div.innerHTML = `
+    <div class="card-head">
+      <div class="tag"><span class="dot"></span><span id="tagLabel-${t.id}">Tipo ${t.id}</span></div>
+      <input type="text" class="name-input" id="nome-${t.id}" value="${t.nome}">
+    </div>
+    <div class="inputs-row">
+      <div class="field">
+        <label>Duração (h)</label>
+        <input type="number" id="dur-${t.id}" value="${t.duracao}" min="0" step="0.5">
+      </div>
+      <div class="field">
+        <label>Vapor (t/h)</label>
+        <input type="number" id="vap-${t.id}" value="${t.vapor}" min="0" step="1">
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="result-line"><span>Vapor total por liquidação</span><b id="vaporTotal-${t.id}">—</b></div>
+    <div class="result-line"><span>Bagaço necessário / liquidação</span><b id="bagNec-${t.id}">—</b></div>
+    <div class="headline">
+      <div class="num" id="qtd-${t.id}">—<small>liquidações possíveis</small></div>
+      <div class="rods" id="rods-${t.id}"></div>
+    </div>
+    <div class="exceed" id="exceed-${t.id}">Estoque insuficiente para 1 liquidação completa deste tipo.</div>
+  `;
+  grid.appendChild(div);
+}
+
+tipos.forEach(buildCard);
+
+const estoqueEl = document.getElementById('estoque');
+const estoqueMaxEl = document.getElementById('estoqueMaxLiq');
+const cespEl = document.getElementById('cesp');
+const cespVal = document.getElementById('cespVal');
+const siloFill = document.getElementById('siloFill');
+const siloPct = document.getElementById('siloPct');
+const resumoBody = document.getElementById('resumoBody');
+const summaryFoot = document.getElementById('summaryFoot');
+const copyBtn = document.getElementById('copyBtn');
+const copyBtnText = document.getElementById('copyBtnText');
+
+const fmt = (n, d=1) => n.toLocaleString('pt-BR', {minimumFractionDigits:d, maximumFractionDigits:d});
+
+let lastResults = [];
+let lastEstoque = 0, lastEstoqueMax = 0, lastCesp = 2.0;
+
+function recalc(){
+  const estoque = parseFloat(estoqueEl.value) || 0;
+  const estoqueMax = parseFloat(estoqueMaxEl.value) || 0;
+  const cesp = parseFloat(cespEl.value) || 2.0;
+  cespVal.innerHTML = fmt(cesp,2) + '<small> t vapor / t bagaço</small>';
+
+  const results = tipos.map(t=>{
+    const dur = parseFloat(document.getElementById(`dur-${t.id}`).value) || 0;
+    const vaporH = parseFloat(document.getElementById(`vap-${t.id}`).value) || 0;
+    const vaporTotal = dur * vaporH;
+    const bagNec = cesp > 0 ? vaporTotal / cesp : 0;
+    const qtd = bagNec > 0 ? estoque / bagNec : 0;
+    const nome = document.getElementById(`nome-${t.id}`).value || `Tipo ${t.id}`;
+    return {t, nome, dur, vaporH, vaporTotal, bagNec, qtd};
+  });
+
+  // silo fill: estoque atual em relação à capacidade máxima real
+  const pct = estoqueMax > 0 ? Math.min(100, (estoque/estoqueMax)*100) : 0;
+  siloFill.style.height = pct + '%';
+  siloPct.innerHTML = fmt(pct,0) + '%<small>do estoque máximo</small>';
+
+  lastResults = results;
+  lastEstoque = estoque;
+  lastEstoqueMax = estoqueMax;
+  lastCesp = cesp;
+
+  results.forEach(r=>{
+    const id = r.t.id;
+    document.getElementById(`tagLabel-${id}`).textContent = document.getElementById(`nome-${id}`).value || `Tipo ${id}`;
+    document.getElementById('vaporTotal-'+id).textContent = fmt(r.vaporTotal) + ' t';
+    document.getElementById('bagNec-'+id).textContent = fmt(r.bagNec) + ' t';
+
+    const qtdEl = document.getElementById('qtd-'+id);
+    const exceedEl = document.getElementById('exceed-'+id);
+    const rodsEl = document.getElementById('rods-'+id);
+    rodsEl.innerHTML = '';
+
+    if(r.bagNec <= 0){
+      qtdEl.innerHTML = '—<small>liquidações possíveis</small>';
+      exceedEl.classList.remove('show');
+      return;
+    }
+
+    const inteiras = Math.floor(r.qtd);
+    const frac = r.qtd - inteiras;
+    qtdEl.innerHTML = fmt(r.qtd,2) + '<small>liquidações possíveis (' + inteiras + ' inteiras)</small>';
+    exceedEl.classList.toggle('show', inteiras < 1);
+
+    const maxRods = 12;
+    const shown = Math.min(inteiras, maxRods);
+    for(let i=0;i<shown;i++){
+      const s = document.createElement('div'); s.className='rod'; rodsEl.appendChild(s);
+    }
+    if(frac > 0.02 && shown < maxRods){
+      const s = document.createElement('div'); s.className='rod partial'; rodsEl.appendChild(s);
+    }
+  });
+
+  buildResumo();
+}
+
+function buildResumo(){
+  resumoBody.innerHTML = lastResults.map(r=>`
+    <tr>
+      <td class="name"><span class="dot" style="background:${r.t.color}"></span>${r.nome}</td>
+      <td>${fmt(r.dur,1)} h</td>
+      <td>${fmt(r.vaporH,1)}</td>
+      <td>${fmt(r.bagNec,1)} t</td>
+      <td class="strong">${fmt(Math.floor(r.qtd),0)} <span style="color:var(--text-dim);font-weight:400;">(${fmt(r.qtd,2)})</span></td>
+    </tr>
+  `).join('');
+  summaryFoot.textContent = `Estoque atual: ${fmt(lastEstoque,1)} t de ${fmt(lastEstoqueMax,1)} t máx. · Consumo específico: ${fmt(lastCesp,2)} t vapor/t bagaço`;
+}
+
+function buildWhatsAppText(){
+  const linhas = lastResults.map(r=>
+    `• *${r.nome}*: ${fmt(r.dur,1)}h → ${fmt(r.bagNec,1)} t bagaço/liq. → *${fmt(Math.floor(r.qtd),0)} liquidações*`
+  ).join('\n\n');
+  const pct = lastEstoqueMax > 0 ? (lastEstoque/lastEstoqueMax*100) : 0;
+  return `*ESTOQUE DE BAGAÇO — UNIDADE RONDON*\n`
+    + `Estoque atual: *${fmt(lastEstoque,1)} t* de ${fmt(lastEstoqueMax,1)} t máx. (${fmt(pct,0)}%)\n`
+    + `Consumo específico: ${fmt(lastCesp,2)} t vapor / t bagaço\n\n`
+    + `*Liquidações possíveis por tipo:*\n${linhas}`;
+}
+
+copyBtn.addEventListener('click', async ()=>{
+  const text = buildWhatsAppText();
+  try{
+    await navigator.clipboard.writeText(text);
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+  copyBtn.classList.add('copied');
+  copyBtnText.textContent = 'Copiado!';
+  setTimeout(()=>{ copyBtn.classList.remove('copied'); copyBtnText.textContent = 'Copiar para WhatsApp'; }, 1800);
+});
+
+document.addEventListener('input', recalc);
+recalc();
+
+})();
+</script>
+
+<script>
+/* ===== Aba: Projeção 30 dias (escopo isolado) ===== */
+(function(){
+
 /* ============================================================
    CONFIGURAÇÃO DO SUPABASE
    1. Crie um projeto em https://supabase.com
@@ -1040,6 +1825,9 @@ btnWhatsapp.addEventListener('click', async ()=>{
   setTimeout(()=>{ btnWhatsapp.classList.remove('copied'); btnWhatsappText.textContent = 'Copiar resumo para WhatsApp'; }, 1800);
 });
 
+
+})();
 </script>
+
 </body>
 </html>
