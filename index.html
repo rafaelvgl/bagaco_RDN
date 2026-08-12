@@ -338,6 +338,12 @@
       </div>
 
       <div class="group">
+        <div class="label">Estoque mínimo (segurança)</div>
+        <input type="number" id="estoqueMin" value="500" min="0" step="10">
+        <div class="unit">toneladas (t)</div>
+      </div>
+
+      <div class="group">
         <div class="group-title" style="color:var(--ember);">Registro diário · conchas por turno</div>
 
         <div class="reg-date">
@@ -527,6 +533,7 @@ document.getElementById('regData').valueAsDate = new Date();
 const els = {
   estoqueAtual: document.getElementById('estoqueAtual'),
   estoqueMax: document.getElementById('estoqueMax'),
+  estoqueMin: document.getElementById('estoqueMin'),
   conchasA: document.getElementById('conchasA'),
   conchasB: document.getElementById('conchasB'),
   conchasC: document.getElementById('conchasC'),
@@ -664,6 +671,7 @@ let lastResumo = null;
 function recalc(){
   const estoqueAtual = parseFloat(els.estoqueAtual.value) || 0;
   const estoqueMax = parseFloat(els.estoqueMax.value) || 0;
+  const estoqueMin = parseFloat(els.estoqueMin.value) || 0;
   const conchasA = parseFloat(els.conchasA.value) || 0;
   const conchasB = parseFloat(els.conchasB.value) || 0;
   const conchasC = parseFloat(els.conchasC.value) || 0;
@@ -747,7 +755,7 @@ function recalc(){
 
   // valores para o resumo do WhatsApp
   lastResumo = {
-    estoqueAtual, estoqueMax, entrada, saida, saldo,
+    estoqueAtual, estoqueMax, estoqueMin, entrada, saida, saldo,
     estoqueDia30: serie[30], ruptura, diaEstouro, janela, mediaDiasUsados,
     usandoMedia: mediaEntrada !== null
   };
@@ -775,6 +783,7 @@ const janelaEl = document.getElementById('janelaMedia');
 function applyParametros(p){
   els.estoqueAtual.value = p.estoque_atual;
   els.estoqueMax.value = p.estoque_max;
+  if(p.estoque_min !== undefined && p.estoque_min !== null) els.estoqueMin.value = p.estoque_min;
   els.massaConcha.value = p.massa_concha;
   els.carretas.value = p.carretas_dia;
   els.densidade.value = p.densidade_carreta;
@@ -799,6 +808,7 @@ function scheduleSaveParametros(){
       await sbPatch('parametros', 'id=eq.1', {
         estoque_atual: parseFloat(els.estoqueAtual.value) || 0,
         estoque_max: parseFloat(els.estoqueMax.value) || 0,
+        estoque_min: parseFloat(els.estoqueMin.value) || 0,
         massa_concha: parseFloat(els.massaConcha.value) || 0,
         carretas_dia: parseFloat(els.carretas.value) || 0,
         densidade_carreta: parseFloat(els.densidade.value) || 0,
@@ -810,7 +820,7 @@ function scheduleSaveParametros(){
     }catch(e){ console.error(e); setStatus('Erro ao salvar parâmetros', 'err'); }
   }, 700);
 }
-[els.estoqueAtual, els.estoqueMax, els.massaConcha, els.carretas, els.densidade, janelaEl].forEach(el=>{
+[els.estoqueAtual, els.estoqueMax, els.estoqueMin, els.massaConcha, els.carretas, els.densidade, janelaEl].forEach(el=>{
   el.addEventListener('change', scheduleSaveParametros);
 });
 
@@ -990,21 +1000,25 @@ function buildResumoWhatsapp(){
   const entradaLabel = r.usandoMedia
     ? `Entrada média (últ. ${r.mediaDiasUsados}d): *${fmt(r.entrada,0)} t/dia*`
     : `Entrada estimada: *${fmt(r.entrada,0)} t/dia*`;
-  const rupturaLinha = r.ruptura !== null
-    ? `⚠ Estoque de bagaço zerado no dia *${r.ruptura}*`
-    : '✅ Sem previsão de estoque de bagaço zerado daqui 30 dias';
-  const estouroLinha = r.diaEstouro !== null
-    ? `\n🟡 Limite de armazenagem excedido em *${r.diaEstouro} dia${r.diaEstouro>1?'s':''}* (a partir de hoje)`
-    : '';
+
+  let statusLinha;
+  if(r.ruptura !== null){
+    statusLinha = `⚠ Estoque de bagaço zerado no dia *${r.ruptura}*`;
+  } else if(r.diaEstouro !== null){
+    statusLinha = `🟡 Limite de armazenagem excedido em *${r.diaEstouro} dia${r.diaEstouro>1?'s':''}* (a partir de hoje)`;
+  } else if(r.estoqueDia30 < r.estoqueMin){
+    statusLinha = `🔶 Estoque abaixo do mínimo de segurança (*${fmt(r.estoqueDia30,0)} t* < mínimo de ${fmt(r.estoqueMin,0)} t)`;
+  } else {
+    statusLinha = '✅ Estoque dentro da faixa segura (entre o mínimo e o máximo)';
+  }
 
   return `*PROJEÇÃO DE ESTOQUE DE BAGAÇO*\n`
     + `Estoque atual: *${fmt(r.estoqueAtual,0)} t* de ${fmt(r.estoqueMax,0)} t máx. (${fmt(pct,0)}%)\n\n`
     + `${entradaLabel}\n`
     + `Saída diária: *${fmt(r.saida,0)} t/dia*\n`
     + `Saldo diário: *${(r.saldo>=0?'+':'')}${fmt(r.saldo,0)} t/dia*\n\n`
-    + `Estoque projetado (dia 30): *${fmt(r.estoqueDia30,0)} t*\n`
-    + `${rupturaLinha}`
-    + `${estouroLinha}`;
+    + `Estoque estimado para daqui 30 dias: *${fmt(r.estoqueDia30,0)} t*\n`
+    + `${statusLinha}`;
 }
 
 const btnWhatsapp = document.getElementById('btnWhatsapp');
