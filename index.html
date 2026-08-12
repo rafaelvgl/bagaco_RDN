@@ -54,16 +54,17 @@
   .sub{color:var(--text-mid);font-size:13px;max-width:680px;line-height:1.5;}
 
   .layout{display:grid;grid-template-columns:290px 1fr;gap:20px;align-items:start;}
-  @media (max-width:900px){
-    .layout{grid-template-columns:1fr;}
-    .sticky{position:static;top:auto;}
-  }
 
   .panel{
     background:var(--bg-panel);border:1px solid var(--border);border-radius:10px;
     padding:20px;
   }
   .sticky{position:sticky;top:20px;}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;}
+    .sticky{position:static !important;top:auto;}
+  }
 
   .label{
     font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:12px;
@@ -249,7 +250,7 @@
   <header>
     <div class="eyebrow">Projeção de Balanço · Pátio de Bagaço</div>
     <h1>Estoque de bagaço — projeção 30 dias</h1>
-    <p class="sub">Projeção diária do estoque usando a média móvel (1 a 5 dias) da sobra/falta real de bagaço registrada nos lançamentos como entrada, e a venda por carretas como saída. Parâmetros e lançamentos ficam salvos no Supabase — qualquer pessoa que abrir este painel vê os mesmos dados.</p>
+    <p class="sub">Projeção diária do estoque usando a média móvel (1 a 5 dias) da sobra/falta real de bagaço registrada nos lançamentos como entrada, e a venda por carretas como saída.</p>
   </header>
 
   <div class="layout">
