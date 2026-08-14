@@ -1333,28 +1333,33 @@ function setLiqStatus(msg, cls){
 
 const parametrosLiqRef = FB_READY ? db.collection('parametros').doc('liquidacao') : null;
 
+// não sobrescreve um campo enquanto a pessoa está digitando nele
+function setIfNotFocused(el, value){
+  if(document.activeElement !== el && value !== undefined) el.value = value;
+}
+
 function applyParametrosLiq(p){
-  if(p.estoque !== undefined) estoqueEl.value = p.estoque;
-  if(p.estoqueMax !== undefined) estoqueMaxEl.value = p.estoqueMax;
-  if(p.cesp !== undefined) cespEl.value = p.cesp;
+  setIfNotFocused(estoqueEl, p.estoque);
+  setIfNotFocused(estoqueMaxEl, p.estoqueMax);
+  setIfNotFocused(cespEl, p.cesp);
   if(p.tipos){
     tipos.forEach(t=>{
       const saved = p.tipos[t.id];
       if(!saved) return;
-      if(saved.nome !== undefined) document.getElementById(`nome-${t.id}`).value = saved.nome;
-      if(saved.dur !== undefined) document.getElementById(`dur-${t.id}`).value = saved.dur;
-      if(saved.vap !== undefined) document.getElementById(`vap-${t.id}`).value = saved.vap;
+      setIfNotFocused(document.getElementById(`nome-${t.id}`), saved.nome);
+      setIfNotFocused(document.getElementById(`dur-${t.id}`), saved.dur);
+      setIfNotFocused(document.getElementById(`vap-${t.id}`), saved.vap);
     });
   }
   recalc();
 }
 
-async function loadParametrosLiq(){
-  if(!FB_READY){ setLiqStatus('Firebase não configurado — dados só neste navegador'); return; }
-  try{
-    const snap = await parametrosLiqRef.get();
+if(FB_READY){
+  parametrosLiqRef.onSnapshot(snap=>{
     if(snap.exists) applyParametrosLiq(snap.data());
-  }catch(e){ console.error(e); setLiqStatus('Erro ao carregar parâmetros do Firebase', 'err'); }
+  }, err=>{ console.error(err); setLiqStatus('Erro na conexão em tempo real', 'err'); });
+} else {
+  setLiqStatus('Firebase não configurado — dados só neste navegador');
 }
 
 let liqSaveTimer = null;
@@ -1391,8 +1396,6 @@ tipos.forEach(t=>{
   liqWatchedEls.push(document.getElementById(`vap-${t.id}`));
 });
 liqWatchedEls.forEach(el=> el.addEventListener('change', scheduleSaveParametrosLiq));
-
-loadParametrosLiq();
 
 })();
 </script>
@@ -1554,7 +1557,7 @@ function showTooltip(ev, i, val){
 function hideTooltip(){ tooltip.classList.remove('show'); }
 
 let currentSerie = [], currentEstoqueMax = 0;
-let mediaEntrada = null;      // t/dia, calculada a partir do histórico (Supabase)
+let mediaEntrada = null;      // t/dia, calculada a partir do histórico (Firebase)
 let mediaDiasUsados = 0;
 let lastResumo = null;
 
@@ -1655,7 +1658,7 @@ document.addEventListener('input', recalc);
 recalc();
 
 /* ============================================================
-   SINCRONIZAÇÃO COM FIREBASE (FIRESTORE)
+   SINCRONIZAÇÃO COM FIREBASE (FIRESTORE) — TEMPO REAL
    ============================================================ */
 const saveStatusEl = document.getElementById('saveStatus');
 function setStatus(msg, cls){
@@ -1667,27 +1670,125 @@ if(!FB_READY){
   document.getElementById('configBanner').classList.add('show');
 }
 
+// não sobrescreve um campo enquanto a pessoa está digitando nele
+function setIfNotFocused(el, value){
+  if(document.activeElement !== el && value !== undefined && value !== null) el.value = value;
+}
+
+// ---- Lançamentos (fonte única: alimenta histórico, média móvel e o registro do dia) ----
+const histWrap = document.getElementById('histWrap');
+let lastByDate = {};
+
+function fmtSigned(n){
+  const s = n >= 0 ? '+' : '−';
+  return s + Math.abs(n).toLocaleString('pt-BR');
+}
+
+function renderHistorico(byDate){
+  const dates = Object.keys(byDate).sort().reverse().slice(0, 21);
+  if(!dates.length){ histWrap.innerHTML = '<div class="hist-empty">Nenhum lançamento registrado ainda.</div>'; return; }
+  let html = `<table class="hist"><thead><tr><th>Data</th><th>A</th><th>B</th><th>C</th><th>Total (t)</th></tr></thead><tbody>`;
+  dates.forEach(d=>{
+    const day = byDate[d];
+    let totalT = 0;
+    const cell = t=>{
+      const r = day[t];
+      if(!r) return '<span style="color:var(--text-dim)">—</span>';
+      totalT += r.conchas * r.massaConcha;
+      return `<span class="${r.conchas<0?'neg':'pos'}">${fmtSigned(r.conchas)}</span>`;
+    };
+    const [y,m,dd] = d.split('-');
+    html += `<tr><td class="date">${dd}/${m}/${y}</td><td>${cell('A')}</td><td>${cell('B')}</td><td>${cell('C')}</td><td class="tot">${fmtSigned(Math.round(totalT))} t</td></tr>`;
+  });
+  html += '</tbody></table>';
+  histWrap.innerHTML = html;
+}
+
+function recomputeMedia(){
+  const janela = parseInt(document.getElementById('janelaMedia').value) || 3;
+  const dates = Object.keys(lastByDate).sort().reverse().slice(0, janela);
+  if(dates.length){
+    const total = dates.reduce((s,d)=>{
+      const day = lastByDate[d];
+      let t = 0;
+      ['A','B','C'].forEach(k=>{ if(day[k]) t += day[k].conchas * day[k].massaConcha; });
+      return s + t;
+    }, 0);
+    mediaEntrada = total / dates.length;
+    mediaDiasUsados = dates.length;
+  } else {
+    mediaEntrada = null;
+    mediaDiasUsados = 0;
+  }
+  recalc();
+}
+
+function applyLancamentoFields(){
+  const data = document.getElementById('regData').value;
+  const day = lastByDate[data] || {};
+  ['A','B','C'].forEach(t=>{
+    const input = document.getElementById('conchas'+t);
+    const rec = day[t];
+    if(document.activeElement === input) return; // não interrompe quem está digitando
+    if(rec){
+      input.value = Math.abs(rec.conchas);
+      signs[t] = rec.conchas < 0 ? -1 : 1;
+    } else {
+      signs[t] = 1;
+    }
+    signBtns[t].dataset.sign = signs[t];
+    signBtns[t].textContent = signs[t] > 0 ? '+' : '−';
+    signBtns[t].classList.toggle('pos', signs[t] > 0);
+    signBtns[t].classList.toggle('neg', signs[t] < 0);
+  });
+  recalc();
+}
+
+if(FB_READY){
+  db.collection('lancamentos').orderBy('data','desc').limit(90)
+    .onSnapshot(snap=>{
+      const byDate = {};
+      snap.forEach(doc=>{
+        const r = doc.data();
+        if(!byDate[r.data]) byDate[r.data] = {};
+        byDate[r.data][r.turno] = r;
+      });
+      lastByDate = byDate;
+      renderHistorico(byDate);
+      recomputeMedia();
+      applyLancamentoFields();
+    }, err=>{
+      console.error(err);
+      histWrap.innerHTML = '<div class="hist-empty">Erro na conexão em tempo real.</div>';
+    });
+} else {
+  histWrap.innerHTML = '<div class="hist-empty">Configure o Firebase para ver o histórico compartilhado.</div>';
+}
+
+document.getElementById('btnAtualizarHist').addEventListener('click', ()=> renderHistorico(lastByDate));
+document.getElementById('regData').addEventListener('change', applyLancamentoFields);
+document.getElementById('janelaMedia').addEventListener('input', recomputeMedia);
+
 // ---- Parâmetros compartilhados (estoque atual/máximo, massa, carretas, densidade, janela) ----
 const janelaEl = document.getElementById('janelaMedia');
 const parametrosRef = FB_READY ? db.collection('parametros').doc('config') : null;
 
 function applyParametros(p){
-  els.estoqueAtual.value = p.estoqueAtual;
-  els.estoqueMax.value = p.estoqueMax;
-  if(p.estoqueMin !== undefined && p.estoqueMin !== null) els.estoqueMin.value = p.estoqueMin;
-  els.massaConcha.value = p.massaConcha;
-  els.carretas.value = p.carretasDia;
-  els.densidade.value = p.densidadeCarreta;
-  if(p.mediaMovelDias) janelaEl.value = p.mediaMovelDias;
+  setIfNotFocused(els.estoqueAtual, p.estoqueAtual);
+  setIfNotFocused(els.estoqueMax, p.estoqueMax);
+  setIfNotFocused(els.estoqueMin, p.estoqueMin);
+  setIfNotFocused(els.massaConcha, p.massaConcha);
+  setIfNotFocused(els.carretas, p.carretasDia);
+  setIfNotFocused(els.densidade, p.densidadeCarreta);
+  setIfNotFocused(janelaEl, p.mediaMovelDias);
   recalc();
+  recomputeMedia();
 }
 
-async function loadParametros(){
-  if(!FB_READY) return;
-  try{
-    const snap = await parametrosRef.get();
+if(FB_READY){
+  parametrosRef.onSnapshot(snap=>{
     if(snap.exists) applyParametros(snap.data());
-  }catch(e){ console.error(e); setStatus('Erro ao carregar parâmetros do Firebase', 'err'); }
+  }, err=>{ console.error(err); setStatus('Erro na conexão em tempo real', 'err'); });
 }
 
 let paramSaveTimer = null;
@@ -1719,34 +1820,6 @@ function scheduleSaveParametros(){
 // cada lançamento vira um documento com id "AAAA-MM-DD_TURNO" (upsert natural)
 function lancDocId(data, turno){ return `${data}_${turno}`; }
 
-async function loadLancamentoDoDia(){
-  if(!FB_READY) return;
-  const data = document.getElementById('regData').value;
-  try{
-    const results = await Promise.all(
-      ['A','B','C'].map(t => db.collection('lancamentos').doc(lancDocId(data,t)).get())
-    );
-    ['A','B','C'].forEach((t,i)=>{
-      const snap = results[i];
-      const input = document.getElementById('conchas'+t);
-      if(snap.exists){
-        const row = snap.data();
-        input.value = Math.abs(row.conchas);
-        signs[t] = row.conchas < 0 ? -1 : 1;
-      } else {
-        signs[t] = 1;
-      }
-      signBtns[t].dataset.sign = signs[t];
-      signBtns[t].textContent = signs[t] > 0 ? '+' : '−';
-      signBtns[t].classList.toggle('pos', signs[t] > 0);
-      signBtns[t].classList.toggle('neg', signs[t] < 0);
-    });
-    recalc();
-  }catch(e){ console.error(e); }
-}
-
-document.getElementById('regData').addEventListener('change', loadLancamentoDoDia);
-
 document.getElementById('btnRegistrar').addEventListener('click', async ()=>{
   if(!FB_READY){ setStatus('Configure o Firebase primeiro (veja o aviso no topo)', 'err'); return; }
   const btn = document.getElementById('btnRegistrar');
@@ -1768,8 +1841,7 @@ document.getElementById('btnRegistrar').addEventListener('click', async ()=>{
     });
     await batch.commit();
     setStatus('Lançamento registrado ✓', 'ok');
-    await loadHistorico();
-    await loadMediaMovel();
+    // o histórico e a média atualizam sozinhos via onSnapshot
   }catch(e){
     console.error(e);
     setStatus('Erro ao registrar. Confira a conexão/config.', 'err');
@@ -1778,88 +1850,6 @@ document.getElementById('btnRegistrar').addEventListener('click', async ()=>{
     setTimeout(()=>setStatus(''), 2500);
   }
 });
-
-// ---- Histórico compartilhado ----
-const histWrap = document.getElementById('histWrap');
-function fmtSigned(n){
-  const s = n >= 0 ? '+' : '−';
-  return s + Math.abs(n).toLocaleString('pt-BR');
-}
-async function loadHistorico(){
-  if(!FB_READY){ histWrap.innerHTML = '<div class="hist-empty">Configure o Firebase para ver o histórico compartilhado.</div>'; return; }
-  try{
-    const snap = await db.collection('lancamentos').orderBy('data','desc').limit(90).get();
-    if(snap.empty){ histWrap.innerHTML = '<div class="hist-empty">Nenhum lançamento registrado ainda.</div>'; return; }
-    const byDate = {};
-    snap.forEach(doc=>{
-      const r = doc.data();
-      if(!byDate[r.data]) byDate[r.data] = {};
-      byDate[r.data][r.turno] = r;
-    });
-    const dates = Object.keys(byDate).sort().reverse().slice(0, 21);
-    let html = `<table class="hist"><thead><tr><th>Data</th><th>A</th><th>B</th><th>C</th><th>Total (t)</th></tr></thead><tbody>`;
-    dates.forEach(d=>{
-      const day = byDate[d];
-      let totalT = 0;
-      const cell = t=>{
-        const r = day[t];
-        if(!r) return '<span style="color:var(--text-dim)">—</span>';
-        totalT += r.conchas * r.massaConcha;
-        return `<span class="${r.conchas<0?'neg':'pos'}">${fmtSigned(r.conchas)}</span>`;
-      };
-      const [y,m,dd] = d.split('-');
-      html += `<tr><td class="date">${dd}/${m}/${y}</td><td>${cell('A')}</td><td>${cell('B')}</td><td>${cell('C')}</td><td class="tot">${fmtSigned(Math.round(totalT))} t</td></tr>`;
-    });
-    html += '</tbody></table>';
-    histWrap.innerHTML = html;
-  }catch(e){
-    console.error(e);
-    histWrap.innerHTML = '<div class="hist-empty">Erro ao carregar histórico.</div>';
-  }
-}
-document.getElementById('btnAtualizarHist').addEventListener('click', loadHistorico);
-
-// ---- Média móvel de entrada (alimenta a projeção) ----
-async function loadMediaMovel(){
-  if(!FB_READY){ mediaEntrada = null; mediaDiasUsados = 0; recalc(); return; }
-  const janela = parseInt(document.getElementById('janelaMedia').value) || 3;
-  try{
-    // busca um pouco mais que o necessário (turnos podem faltar em algum dia)
-    const snap = await db.collection('lancamentos').orderBy('data','desc').limit((janela+3)*3).get();
-    const byDate = {};
-    snap.forEach(doc=>{
-      const r = doc.data();
-      byDate[r.data] = (byDate[r.data]||0) + r.conchas * r.massaConcha;
-    });
-    const dates = Object.keys(byDate).sort().reverse().slice(0, janela);
-    if(dates.length){
-      const total = dates.reduce((s,d)=> s + byDate[d], 0);
-      mediaEntrada = total / dates.length;
-      mediaDiasUsados = dates.length;
-    } else {
-      mediaEntrada = null;
-      mediaDiasUsados = 0;
-    }
-  }catch(e){
-    console.error(e);
-    mediaEntrada = null; mediaDiasUsados = 0;
-  }
-  recalc();
-}
-
-let janelaTimer = null;
-document.getElementById('janelaMedia').addEventListener('input', ()=>{
-  clearTimeout(janelaTimer);
-  janelaTimer = setTimeout(loadMediaMovel, 250);
-});
-
-// ---- Inicialização ----
-(async function init(){
-  await loadParametros();
-  await loadLancamentoDoDia();
-  await loadHistorico();
-  await loadMediaMovel();
-})();
 
 /* expõe o recalc desta aba para o botão de tema global poder
    redesenhar o gráfico SVG quando o tema mudar */
