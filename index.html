@@ -138,6 +138,9 @@ border-color:var(--ember-dim);
 #tabLiquidacoes .unit{
 font-size:11px;color:var(--text-dim);margin-top:5px;letter-spacing:.04em;
 }
+#tabLiquidacoes .save-status{font-size:11px;color:var(--text-dim);margin-top:8px;min-height:14px;}
+#tabLiquidacoes .save-status.ok{color:var(--ok);}
+#tabLiquidacoes .save-status.err{color:var(--danger);}
 #tabLiquidacoes .silo-visual{
 
     margin:22px auto 6px;width:96px;height:230px;position:relative;
@@ -850,6 +853,7 @@ margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-sp
       <div class="label" style="margin-top:16px;">Estoque máximo (capacidade)</div>
       <input type="number" id="estoqueMaxLiq" value="2500" min="0" step="10">
       <div class="unit">toneladas (t)</div>
+      <div class="save-status" id="liqSaveStatus"></div>
 
       <div class="silo-visual">
         <div class="silo-body">
@@ -1073,6 +1077,31 @@ margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-sp
 </div>
 
 <script>
+/* ============================================================
+   CONFIGURAÇÃO DO FIREBASE (compartilhada pelas duas abas)
+   1. Crie um projeto em https://console.firebase.google.com
+   2. No projeto, ative o Firestore Database (modo produção)
+   3. Em Configurações do projeto > Geral > Seus apps, adicione um
+      app da Web e copie o objeto de configuração abaixo
+   4. Em Firestore Database > Regras, cole as regras do arquivo
+      firebase-rules.txt (liberação aberta, sem login)
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: 'AIzaSyCwNZ3uJ2LXwg1SEOKg1Gx6pT0Ujh8wsKQ',
+  authDomain: 'bagaco-c2dc9.firebaseapp.com',
+  projectId: 'bagaco-c2dc9',
+  storageBucket: 'bagaco-c2dc9.firebasestorage.app',
+  messagingSenderId: '906538668000',
+  appId: '1:906538668000:web:f2885705ecee461e74e585'
+};
+
+const FB_READY = !firebaseConfig.apiKey.startsWith('COLE-AQUI');
+let db = null;
+if(FB_READY){
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+}
+
 /* ---- alternância de abas ---- */
 const tabBtnLiq = document.getElementById('tabBtnLiq');
 const tabBtnProj = document.getElementById('tabBtnProj');
@@ -1293,6 +1322,78 @@ copyBtn.addEventListener('click', async ()=>{
 document.addEventListener('input', recalc);
 recalc();
 
+/* ============================================================
+   SINCRONIZAÇÃO COM FIREBASE (parâmetros desta aba)
+   ============================================================ */
+const liqSaveStatusEl = document.getElementById('liqSaveStatus');
+function setLiqStatus(msg, cls){
+  liqSaveStatusEl.textContent = msg;
+  liqSaveStatusEl.className = 'save-status' + (cls ? ' '+cls : '');
+}
+
+const parametrosLiqRef = FB_READY ? db.collection('parametros').doc('liquidacao') : null;
+
+function applyParametrosLiq(p){
+  if(p.estoque !== undefined) estoqueEl.value = p.estoque;
+  if(p.estoqueMax !== undefined) estoqueMaxEl.value = p.estoqueMax;
+  if(p.cesp !== undefined) cespEl.value = p.cesp;
+  if(p.tipos){
+    tipos.forEach(t=>{
+      const saved = p.tipos[t.id];
+      if(!saved) return;
+      if(saved.nome !== undefined) document.getElementById(`nome-${t.id}`).value = saved.nome;
+      if(saved.dur !== undefined) document.getElementById(`dur-${t.id}`).value = saved.dur;
+      if(saved.vap !== undefined) document.getElementById(`vap-${t.id}`).value = saved.vap;
+    });
+  }
+  recalc();
+}
+
+async function loadParametrosLiq(){
+  if(!FB_READY){ setLiqStatus('Firebase não configurado — dados só neste navegador'); return; }
+  try{
+    const snap = await parametrosLiqRef.get();
+    if(snap.exists) applyParametrosLiq(snap.data());
+  }catch(e){ console.error(e); setLiqStatus('Erro ao carregar parâmetros do Firebase', 'err'); }
+}
+
+let liqSaveTimer = null;
+function scheduleSaveParametrosLiq(){
+  if(!FB_READY) return;
+  clearTimeout(liqSaveTimer);
+  liqSaveTimer = setTimeout(async ()=>{
+    try{
+      const tiposData = {};
+      tipos.forEach(t=>{
+        tiposData[t.id] = {
+          nome: document.getElementById(`nome-${t.id}`).value,
+          dur: parseFloat(document.getElementById(`dur-${t.id}`).value) || 0,
+          vap: parseFloat(document.getElementById(`vap-${t.id}`).value) || 0
+        };
+      });
+      await parametrosLiqRef.set({
+        estoque: parseFloat(estoqueEl.value) || 0,
+        estoqueMax: parseFloat(estoqueMaxEl.value) || 0,
+        cesp: parseFloat(cespEl.value) || 2,
+        tipos: tiposData,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      setLiqStatus('Parâmetros salvos ✓', 'ok');
+      setTimeout(()=>setLiqStatus(''), 2000);
+    }catch(e){ console.error(e); setLiqStatus('Erro ao salvar parâmetros', 'err'); }
+  }, 700);
+}
+
+const liqWatchedEls = [estoqueEl, estoqueMaxEl, cespEl];
+tipos.forEach(t=>{
+  liqWatchedEls.push(document.getElementById(`nome-${t.id}`));
+  liqWatchedEls.push(document.getElementById(`dur-${t.id}`));
+  liqWatchedEls.push(document.getElementById(`vap-${t.id}`));
+});
+liqWatchedEls.forEach(el=> el.addEventListener('change', scheduleSaveParametrosLiq));
+
+loadParametrosLiq();
+
 })();
 </script>
 
@@ -1300,30 +1401,9 @@ recalc();
 /* ===== Aba: Projeção 30 dias (escopo isolado) ===== */
 (function(){
 
-/* ============================================================
-   CONFIGURAÇÃO DO FIREBASE
-   1. Crie um projeto em https://console.firebase.google.com
-   2. No projeto, ative o Firestore Database (modo produção)
-   3. Em Configurações do projeto > Geral > Seus apps, adicione um
-      app da Web e copie o objeto de configuração abaixo
-   4. Em Firestore Database > Regras, cole as regras do arquivo
-      firebase-rules.txt (liberação aberta, sem login)
-   ============================================================ */
-const firebaseConfig = {
-  apiKey: 'AIzaSyCwNZ3uJ2LXwg1SEOKg1Gx6pT0Ujh8wsKQ',
-  authDomain: 'bagaco-c2dc9.firebaseapp.com',
-  projectId: 'bagaco-c2dc9',
-  storageBucket: 'bagaco-c2dc9.firebasestorage.app',
-  messagingSenderId: '906538668000',
-  appId: '1:906538668000:web:f2885705ecee461e74e585'
-};
-
-const FB_READY = !firebaseConfig.apiKey.startsWith('COLE-AQUI');
-let db = null;
-if(FB_READY){
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-}
+/* firebaseConfig, FB_READY e db agora são globais (definidos no
+   script compartilhado, junto com a alternância de abas e tema) —
+   assim a aba Liquidações também pode usar o mesmo Firestore */
 
 const signs = { A:1, B:1, C:1 };
 const signBtns = { A:document.getElementById('signA'), B:document.getElementById('signB'), C:document.getElementById('signC') };
