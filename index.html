@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.16.0/firebase-firestore-compat.min.js"></script>
 <style>
 :root{
     --bg-void:#0a0c0e;
@@ -906,7 +908,7 @@ margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-sp
 
 <div class="tab-panel active" id="tabProjecao">
 <div class="config-banner" id="configBanner">
-  ⚠ <strong>Supabase não configurado.</strong> Abra o arquivo HTML em um editor de texto, procure por <code>SUPABASE_URL</code> e <code>SUPABASE_KEY</code> perto do fim do arquivo, e cole as credenciais do seu projeto (botão <b>Connect</b> no topo do painel do projeto, ou Settings → API Keys). Antes disso, os dados ficam só nesta aba, sem compartilhar com outros usuários. Rode também o script <code>supabase-setup.sql</code> uma vez no SQL Editor do Supabase.
+  ⚠ <strong>Firebase não configurado.</strong> Abra o arquivo HTML em um editor de texto, procure por <code>firebaseConfig</code> perto do fim do arquivo, e cole as credenciais do seu projeto (Configurações do projeto → Geral → Seus apps, no console do Firebase). Antes disso, os dados ficam só nesta aba, sem compartilhar com outros usuários. Ative também o Firestore Database e cole as regras do arquivo <code>firebase-rules.txt</code> em Firestore Database → Regras.
 </div>
 <div class="wrap">
 
@@ -1299,44 +1301,28 @@ recalc();
 (function(){
 
 /* ============================================================
-   CONFIGURAÇÃO DO SUPABASE
-   1. Crie um projeto em https://supabase.com
-   2. Rode o arquivo supabase-setup.sql no SQL Editor do projeto
-   3. Pegue a URL e a chave em: botão "Connect" no topo do painel do
-      projeto, OU em Settings > API Keys.
-      - Projetos novos: use a "Publishable key" (começa com sb_publishable_...)
-      - Projetos antigos: use a "anon public" key, aba "Legacy API Keys"
-        (ambas funcionam aqui, não precisa da secret/service_role)
+   CONFIGURAÇÃO DO FIREBASE
+   1. Crie um projeto em https://console.firebase.google.com
+   2. No projeto, ative o Firestore Database (modo produção)
+   3. Em Configurações do projeto > Geral > Seus apps, adicione um
+      app da Web e copie o objeto de configuração abaixo
+   4. Em Firestore Database > Regras, cole as regras do arquivo
+      firebase-rules.txt (liberação aberta, sem login)
    ============================================================ */
-const SUPABASE_URL = 'https://ryfipagwzwiroeywxowx.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_q9KwZzc5Jc3XYHbttSn5WA_tsfRLN0m';
+const firebaseConfig = {
+  apiKey: 'AIzaSyCwNZ3uJ2LXwg1SEOKg1Gx6pT0Ujh8wsKQ',
+  authDomain: 'bagaco-c2dc9.firebaseapp.com',
+  projectId: 'bagaco-c2dc9',
+  storageBucket: 'bagaco-c2dc9.firebasestorage.app',
+  messagingSenderId: '906538668000',
+  appId: '1:906538668000:web:f2885705ecee461e74e585'
+};
 
-const SB_READY = !SUPABASE_URL.startsWith('COLE-AQUI') && !SUPABASE_KEY.startsWith('COLE-AQUI');
-
-function sbHeaders(extra){
-  return Object.assign({
-    apikey: SUPABASE_KEY,
-    'Content-Type': 'application/json'
-  }, extra || {});
-}
-async function sbGet(table, qs){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${qs}`, { headers: sbHeaders() });
-  if(!res.ok) throw new Error('GET ' + table + ' falhou: ' + res.status);
-  return res.json();
-}
-async function sbPatch(table, qs, body){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${qs}`, {
-    method:'PATCH', headers: sbHeaders({Prefer:'return=minimal'}), body: JSON.stringify(body)
-  });
-  if(!res.ok) throw new Error('PATCH ' + table + ' falhou: ' + res.status);
-}
-async function sbUpsert(table, rows, onConflict){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {
-    method:'POST',
-    headers: sbHeaders({Prefer:'resolution=merge-duplicates,return=minimal'}),
-    body: JSON.stringify(rows)
-  });
-  if(!res.ok) throw new Error('UPSERT ' + table + ' falhou: ' + res.status);
+const FB_READY = !firebaseConfig.apiKey.startsWith('COLE-AQUI');
+let db = null;
+if(FB_READY){
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
 }
 
 const signs = { A:1, B:1, C:1 };
@@ -1520,8 +1506,8 @@ function recalc(){
   const mediaInfoEl = document.getElementById('mediaInfo');
   if(mediaEntrada !== null){
     mediaInfoEl.textContent = `média de ${fmt(mediaEntrada,1)} t/dia, com base em ${mediaDiasUsados} dia${mediaDiasUsados>1?'s':''} de histórico`;
-  } else if(!SB_READY){
-    mediaInfoEl.textContent = 'Supabase não configurado — usando os campos digitados ao lado';
+  } else if(!FB_READY){
+    mediaInfoEl.textContent = 'Firebase não configurado — usando os campos digitados ao lado';
   } else {
     mediaInfoEl.textContent = 'sem histórico suficiente ainda — usando os campos digitados ao lado';
   }
@@ -1589,7 +1575,7 @@ document.addEventListener('input', recalc);
 recalc();
 
 /* ============================================================
-   SINCRONIZAÇÃO COM SUPABASE
+   SINCRONIZAÇÃO COM FIREBASE (FIRESTORE)
    ============================================================ */
 const saveStatusEl = document.getElementById('saveStatus');
 function setStatus(msg, cls){
@@ -1597,48 +1583,49 @@ function setStatus(msg, cls){
   saveStatusEl.className = 'save-status' + (cls ? ' '+cls : '');
 }
 
-if(!SB_READY){
+if(!FB_READY){
   document.getElementById('configBanner').classList.add('show');
 }
 
 // ---- Parâmetros compartilhados (estoque atual/máximo, massa, carretas, densidade, janela) ----
 const janelaEl = document.getElementById('janelaMedia');
+const parametrosRef = FB_READY ? db.collection('parametros').doc('config') : null;
 
 function applyParametros(p){
-  els.estoqueAtual.value = p.estoque_atual;
-  els.estoqueMax.value = p.estoque_max;
-  if(p.estoque_min !== undefined && p.estoque_min !== null) els.estoqueMin.value = p.estoque_min;
-  els.massaConcha.value = p.massa_concha;
-  els.carretas.value = p.carretas_dia;
-  els.densidade.value = p.densidade_carreta;
-  if(p.media_movel_dias) janelaEl.value = p.media_movel_dias;
+  els.estoqueAtual.value = p.estoqueAtual;
+  els.estoqueMax.value = p.estoqueMax;
+  if(p.estoqueMin !== undefined && p.estoqueMin !== null) els.estoqueMin.value = p.estoqueMin;
+  els.massaConcha.value = p.massaConcha;
+  els.carretas.value = p.carretasDia;
+  els.densidade.value = p.densidadeCarreta;
+  if(p.mediaMovelDias) janelaEl.value = p.mediaMovelDias;
   recalc();
 }
 
 async function loadParametros(){
-  if(!SB_READY) return;
+  if(!FB_READY) return;
   try{
-    const data = await sbGet('parametros', 'id=eq.1&select=*');
-    if(data && data[0]) applyParametros(data[0]);
-  }catch(e){ console.error(e); setStatus('Erro ao carregar parâmetros do Supabase', 'err'); }
+    const snap = await parametrosRef.get();
+    if(snap.exists) applyParametros(snap.data());
+  }catch(e){ console.error(e); setStatus('Erro ao carregar parâmetros do Firebase', 'err'); }
 }
 
 let paramSaveTimer = null;
 function scheduleSaveParametros(){
-  if(!SB_READY) return;
+  if(!FB_READY) return;
   clearTimeout(paramSaveTimer);
   paramSaveTimer = setTimeout(async ()=>{
     try{
-      await sbPatch('parametros', 'id=eq.1', {
-        estoque_atual: parseFloat(els.estoqueAtual.value) || 0,
-        estoque_max: parseFloat(els.estoqueMax.value) || 0,
-        estoque_min: parseFloat(els.estoqueMin.value) || 0,
-        massa_concha: parseFloat(els.massaConcha.value) || 0,
-        carretas_dia: parseFloat(els.carretas.value) || 0,
-        densidade_carreta: parseFloat(els.densidade.value) || 0,
-        media_movel_dias: parseInt(janelaEl.value) || 3,
-        updated_at: new Date().toISOString()
-      });
+      await parametrosRef.set({
+        estoqueAtual: parseFloat(els.estoqueAtual.value) || 0,
+        estoqueMax: parseFloat(els.estoqueMax.value) || 0,
+        estoqueMin: parseFloat(els.estoqueMin.value) || 0,
+        massaConcha: parseFloat(els.massaConcha.value) || 0,
+        carretasDia: parseFloat(els.carretas.value) || 0,
+        densidadeCarreta: parseFloat(els.densidade.value) || 0,
+        mediaMovelDias: parseInt(janelaEl.value) || 3,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
       setStatus('Parâmetros salvos ✓', 'ok');
       setTimeout(()=>setStatus(''), 2000);
     }catch(e){ console.error(e); setStatus('Erro ao salvar parâmetros', 'err'); }
@@ -1649,15 +1636,21 @@ function scheduleSaveParametros(){
 });
 
 // ---- Lançamento diário (conchas por turno, com sinal) ----
+// cada lançamento vira um documento com id "AAAA-MM-DD_TURNO" (upsert natural)
+function lancDocId(data, turno){ return `${data}_${turno}`; }
+
 async function loadLancamentoDoDia(){
-  if(!SB_READY) return;
-  const data = els.regData ? els.regData.value : document.getElementById('regData').value;
+  if(!FB_READY) return;
+  const data = document.getElementById('regData').value;
   try{
-    const rows = await sbGet('lancamentos', `data=eq.${data}&select=*`);
-    ['A','B','C'].forEach(t=>{
-      const row = rows.find(r=>r.turno===t);
+    const results = await Promise.all(
+      ['A','B','C'].map(t => db.collection('lancamentos').doc(lancDocId(data,t)).get())
+    );
+    ['A','B','C'].forEach((t,i)=>{
+      const snap = results[i];
       const input = document.getElementById('conchas'+t);
-      if(row){
+      if(snap.exists){
+        const row = snap.data();
         input.value = Math.abs(row.conchas);
         signs[t] = row.conchas < 0 ? -1 : 1;
       } else {
@@ -1675,21 +1668,25 @@ async function loadLancamentoDoDia(){
 document.getElementById('regData').addEventListener('change', loadLancamentoDoDia);
 
 document.getElementById('btnRegistrar').addEventListener('click', async ()=>{
-  if(!SB_READY){ setStatus('Configure o Supabase primeiro (veja o aviso no topo)', 'err'); return; }
+  if(!FB_READY){ setStatus('Configure o Firebase primeiro (veja o aviso no topo)', 'err'); return; }
   const btn = document.getElementById('btnRegistrar');
   btn.disabled = true;
   setStatus('Salvando…');
   const data = document.getElementById('regData').value;
   const massa = parseFloat(els.massaConcha.value) || 0;
-  const rows = ['A','B','C'].map(t=>({
-    data,
-    turno: t,
-    conchas: signs[t] * (parseFloat(document.getElementById('conchas'+t).value) || 0),
-    massa_concha: massa,
-    updated_at: new Date().toISOString()
-  }));
   try{
-    await sbUpsert('lancamentos', rows, 'data,turno');
+    const batch = db.batch();
+    ['A','B','C'].forEach(t=>{
+      const ref = db.collection('lancamentos').doc(lancDocId(data,t));
+      batch.set(ref, {
+        data,
+        turno: t,
+        conchas: signs[t] * (parseFloat(document.getElementById('conchas'+t).value) || 0),
+        massaConcha: massa,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    await batch.commit();
     setStatus('Lançamento registrado ✓', 'ok');
     await loadHistorico();
     await loadMediaMovel();
@@ -1709,12 +1706,13 @@ function fmtSigned(n){
   return s + Math.abs(n).toLocaleString('pt-BR');
 }
 async function loadHistorico(){
-  if(!SB_READY){ histWrap.innerHTML = '<div class="hist-empty">Configure o Supabase para ver o histórico compartilhado.</div>'; return; }
+  if(!FB_READY){ histWrap.innerHTML = '<div class="hist-empty">Configure o Firebase para ver o histórico compartilhado.</div>'; return; }
   try{
-    const rows = await sbGet('lancamentos', 'select=*&order=data.desc&limit=90');
-    if(!rows.length){ histWrap.innerHTML = '<div class="hist-empty">Nenhum lançamento registrado ainda.</div>'; return; }
+    const snap = await db.collection('lancamentos').orderBy('data','desc').limit(90).get();
+    if(snap.empty){ histWrap.innerHTML = '<div class="hist-empty">Nenhum lançamento registrado ainda.</div>'; return; }
     const byDate = {};
-    rows.forEach(r=>{
+    snap.forEach(doc=>{
+      const r = doc.data();
       if(!byDate[r.data]) byDate[r.data] = {};
       byDate[r.data][r.turno] = r;
     });
@@ -1726,7 +1724,7 @@ async function loadHistorico(){
       const cell = t=>{
         const r = day[t];
         if(!r) return '<span style="color:var(--text-dim)">—</span>';
-        totalT += r.conchas * r.massa_concha;
+        totalT += r.conchas * r.massaConcha;
         return `<span class="${r.conchas<0?'neg':'pos'}">${fmtSigned(r.conchas)}</span>`;
       };
       const [y,m,dd] = d.split('-');
@@ -1743,13 +1741,16 @@ document.getElementById('btnAtualizarHist').addEventListener('click', loadHistor
 
 // ---- Média móvel de entrada (alimenta a projeção) ----
 async function loadMediaMovel(){
-  if(!SB_READY){ mediaEntrada = null; mediaDiasUsados = 0; recalc(); return; }
+  if(!FB_READY){ mediaEntrada = null; mediaDiasUsados = 0; recalc(); return; }
   const janela = parseInt(document.getElementById('janelaMedia').value) || 3;
   try{
     // busca um pouco mais que o necessário (turnos podem faltar em algum dia)
-    const rows = await sbGet('lancamentos', `select=*&order=data.desc&limit=${(janela+3)*3}`);
+    const snap = await db.collection('lancamentos').orderBy('data','desc').limit((janela+3)*3).get();
     const byDate = {};
-    rows.forEach(r=>{ byDate[r.data] = (byDate[r.data]||0) + r.conchas * r.massa_concha; });
+    snap.forEach(doc=>{
+      const r = doc.data();
+      byDate[r.data] = (byDate[r.data]||0) + r.conchas * r.massaConcha;
+    });
     const dates = Object.keys(byDate).sort().reverse().slice(0, janela);
     if(dates.length){
       const total = dates.reduce((s,d)=> s + byDate[d], 0);
