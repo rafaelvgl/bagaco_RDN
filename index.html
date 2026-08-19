@@ -930,7 +930,7 @@ margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-sp
         <div class="group-title">Estoque</div>
         <div class="label">Estoque atual</div>
         <input type="number" id="estoqueAtual" value="2000" min="0" step="10">
-        <div class="unit">toneladas (t)</div>
+        <div class="unit">toneladas (t) — preenchido automaticamente pela estimativa de hoje, se houver uma medição-âncora abaixo</div>
       </div>
 
       <div class="group">
@@ -943,6 +943,16 @@ margin-top:26px;text-align:center;color:var(--text-dim);font-size:11px;letter-sp
         <div class="label">Estoque mínimo (segurança)</div>
         <input type="number" id="estoqueMin" value="500" min="0" step="10">
         <div class="unit">toneladas (t)</div>
+      </div>
+
+      <div class="group">
+        <div class="group-title" style="color:#c792ea;">Medição de estoque (ponto de partida)</div>
+        <div class="label">Estoque medido</div>
+        <input type="number" id="estoqueAncoraValor" min="0" step="10" placeholder="ex.: 1300">
+        <div class="unit">toneladas (t)</div>
+        <div class="label" style="margin-top:12px;">Data da medição</div>
+        <input type="date" id="estoqueAncoraData">
+        <div class="unit">Fica congelado até você digitar uma nova medição. A tabela de histórico calcula o estoque estimado dia a dia a partir daqui, somando os lançamentos de conchas registrados.</div>
       </div>
 
       <div class="group">
@@ -1427,6 +1437,8 @@ const els = {
   estoqueAtual: document.getElementById('estoqueAtual'),
   estoqueMax: document.getElementById('estoqueMax'),
   estoqueMin: document.getElementById('estoqueMin'),
+  estoqueAncoraValor: document.getElementById('estoqueAncoraValor'),
+  estoqueAncoraData: document.getElementById('estoqueAncoraData'),
   conchasA: document.getElementById('conchasA'),
   conchasB: document.getElementById('conchasB'),
   conchasC: document.getElementById('conchasC'),
@@ -1684,12 +1696,72 @@ function fmtSigned(n){
   return s + Math.abs(n).toLocaleString('pt-BR');
 }
 
+function todayStr(){
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+}
+
+function dateRange(startStr, endStr){
+  const out = [];
+  let d = new Date(startStr+'T00:00:00');
+  const end = new Date(endStr+'T00:00:00');
+  while(d <= end){
+    out.push(d.toISOString().slice(0,10));
+    d.setDate(d.getDate()+1);
+  }
+  return out;
+}
+
+let ultimaSincroniaAutomatica = null; // evita disparar save em loop
+
+function syncEstoqueAtualComEstimativa(estimado){
+  const hoje = todayStr();
+  const val = estimado[hoje];
+  if(val === undefined) return; // sem âncora ainda: não mexe no campo manual
+  const arredondado = Math.round(val);
+  if(document.activeElement === els.estoqueAtual) return; // pessoa está digitando ali agora
+  if(parseFloat(els.estoqueAtual.value) === arredondado) return; // já está igual, nada a fazer
+  els.estoqueAtual.value = arredondado;
+  ultimaSincroniaAutomatica = arredondado;
+  recalc();
+  scheduleSaveParametros();
+}
+
+function computeEstoqueEstimado(byDate){
+  const ancoraData = els.estoqueAncoraData.value;
+  const ancoraValorStr = els.estoqueAncoraValor.value;
+  if(!ancoraData || ancoraValorStr === '') return {};
+  const ancoraValor = parseFloat(ancoraValorStr) || 0;
+  const hoje = todayStr();
+  const fim = hoje > ancoraData ? hoje : ancoraData;
+  const dias = dateRange(ancoraData, fim); // ordem crescente
+  const est = {};
+  let running = ancoraValor;
+  dias.forEach(d=>{
+    if(d === ancoraData){
+      running = ancoraValor; // dia da medição: usa o valor medido, sem somar lançamentos desse dia
+    } else {
+      const day = byDate[d] || {};
+      let net = 0;
+      ['A','B','C'].forEach(k=>{ if(day[k]) net += day[k].conchas * day[k].massaConcha; });
+      running += net;
+    }
+    est[d] = running;
+  });
+  return est;
+}
+
 function renderHistorico(byDate){
-  const dates = Object.keys(byDate).sort().reverse().slice(0, 21);
+  const estimado = computeEstoqueEstimado(byDate);
+  syncEstoqueAtualComEstimativa(estimado);
+  const allDates = new Set([...Object.keys(byDate), ...Object.keys(estimado)]);
+  const dates = Array.from(allDates).sort().reverse().slice(0, 21);
   if(!dates.length){ histWrap.innerHTML = '<div class="hist-empty">Nenhum lançamento registrado ainda.</div>'; return; }
-  let html = `<table class="hist"><thead><tr><th>Data</th><th>A</th><th>B</th><th>C</th><th>Total (t)</th></tr></thead><tbody>`;
+  const temEstimativa = Object.keys(estimado).length > 0;
+  let html = `<table class="hist"><thead><tr><th>Data</th><th>A</th><th>B</th><th>C</th><th>Total (t)</th>${temEstimativa ? '<th>Estoque estimado</th>' : ''}</tr></thead><tbody>`;
   dates.forEach(d=>{
-    const day = byDate[d];
+    const day = byDate[d] || {};
     let totalT = 0;
     const cell = t=>{
       const r = day[t];
@@ -1698,7 +1770,11 @@ function renderHistorico(byDate){
       return `<span class="${r.conchas<0?'neg':'pos'}">${fmtSigned(r.conchas)}</span>`;
     };
     const [y,m,dd] = d.split('-');
-    html += `<tr><td class="date">${dd}/${m}/${y}</td><td>${cell('A')}</td><td>${cell('B')}</td><td>${cell('C')}</td><td class="tot">${fmtSigned(Math.round(totalT))} t</td></tr>`;
+    const isHoje = d === todayStr();
+    const estCell = temEstimativa
+      ? `<td class="tot">${estimado[d] !== undefined ? fmt(estimado[d],0) + ' t' : '<span style="color:var(--text-dim)">—</span>'}</td>`
+      : '';
+    html += `<tr${isHoje ? ' style="background:rgba(255,122,69,0.06);"' : ''}><td class="date">${dd}/${m}/${y}${isHoje ? ' <span style="color:var(--ember);font-size:10px;">(hoje)</span>' : ''}</td><td>${cell('A')}</td><td>${cell('B')}</td><td>${cell('C')}</td><td class="tot">${fmtSigned(Math.round(totalT))} t</td>${estCell}</tr>`;
   });
   html += '</tbody></table>';
   histWrap.innerHTML = html;
@@ -1781,8 +1857,11 @@ function applyParametros(p){
   setIfNotFocused(els.carretas, p.carretasDia);
   setIfNotFocused(els.densidade, p.densidadeCarreta);
   setIfNotFocused(janelaEl, p.mediaMovelDias);
+  if(p.estoqueAncoraValor !== undefined) setIfNotFocused(els.estoqueAncoraValor, p.estoqueAncoraValor);
+  if(p.estoqueAncoraData) setIfNotFocused(els.estoqueAncoraData, p.estoqueAncoraData);
   recalc();
   recomputeMedia();
+  renderHistorico(lastByDate);
 }
 
 if(FB_READY){
@@ -1805,6 +1884,8 @@ function scheduleSaveParametros(){
         carretasDia: parseFloat(els.carretas.value) || 0,
         densidadeCarreta: parseFloat(els.densidade.value) || 0,
         mediaMovelDias: parseInt(janelaEl.value) || 3,
+        estoqueAncoraValor: els.estoqueAncoraValor.value === '' ? null : parseFloat(els.estoqueAncoraValor.value),
+        estoqueAncoraData: els.estoqueAncoraData.value || null,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       setStatus('Parâmetros salvos ✓', 'ok');
@@ -1812,9 +1893,11 @@ function scheduleSaveParametros(){
     }catch(e){ console.error(e); setStatus('Erro ao salvar parâmetros', 'err'); }
   }, 700);
 }
-[els.estoqueAtual, els.estoqueMax, els.estoqueMin, els.massaConcha, els.carretas, els.densidade, janelaEl].forEach(el=>{
+[els.estoqueAtual, els.estoqueMax, els.estoqueMin, els.massaConcha, els.carretas, els.densidade, janelaEl, els.estoqueAncoraValor, els.estoqueAncoraData].forEach(el=>{
   el.addEventListener('change', scheduleSaveParametros);
 });
+document.getElementById('estoqueAncoraValor').addEventListener('input', ()=> renderHistorico(lastByDate));
+document.getElementById('estoqueAncoraData').addEventListener('input', ()=> renderHistorico(lastByDate));
 
 // ---- Lançamento diário (conchas por turno, com sinal) ----
 // cada lançamento vira um documento com id "AAAA-MM-DD_TURNO" (upsert natural)
