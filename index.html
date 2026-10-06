@@ -1206,7 +1206,7 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
   </div>
 
   <div class="share-card">
-    <div class="share-text">Gera um resumo simples e direto da projeção atual — <b>estoque, saldo de conchas de cada turno, saldo atual (anterior + recebido + conchas), saída e saldo diário</b> — pronto para colar numa conversa do WhatsApp.</div>
+    <div class="share-text">Gera um resumo simples e direto da projeção atual — <b>estoque atual, saldo de conchas de cada turno, saldo atual (anterior + recebido + conchas), entrada média, saída e saldo diário</b> — pronto para colar numa conversa do WhatsApp.</div>
     <button type="button" class="whatsapp-btn" id="btnWhatsapp">
       <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91C21.96 6.45 17.5 2 12.04 2m0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.23 8.23 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.55-3.7 8.24-8.24 8.24m4.52-6.17c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.13-.17.24-.64.81-.78.97-.15.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.24-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.24-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.24-.86.85-.86 2.06 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.55.1.47-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.29"/></svg>
       <span id="btnWhatsappText">Copiar resumo para WhatsApp</span>
@@ -2339,21 +2339,9 @@ window.__projRedraw = recalc;
 function buildResumoWhatsapp(){
   if(!lastResumo) return '';
   const r = lastResumo;
-  const pct = r.estoqueMax > 0 ? (r.estoqueAtual / r.estoqueMax * 100) : 0;
   const entradaLabel = r.usandoMedia
     ? `Entrada média (últ. ${r.mediaDiasUsados}d): *${fmt(r.entrada,0)} t/dia*`
     : `Entrada estimada: *${fmt(r.entrada,0)} t/dia*`;
-
-  let statusLinha;
-  if(r.ruptura !== null){
-    statusLinha = `⚠ Estoque de bagaço zerado em *${dateOffsetStr(r.ruptura)}* (daqui ${r.ruptura} dia${r.ruptura>1?'s':''})`;
-  } else if(r.diaEstouro !== null){
-    statusLinha = `🟡 Limite de armazenagem excedido em *${dateOffsetStr(r.diaEstouro)}* (daqui ${r.diaEstouro} dia${r.diaEstouro>1?'s':''})`;
-  } else if(r.estoqueDia30 < r.estoqueMin){
-    statusLinha = `🔶 Estoque abaixo do mínimo de segurança (*${fmt(r.estoqueDia30,0)} t* < mínimo de ${fmt(r.estoqueMin,0)} t)`;
-  } else {
-    statusLinha = '✅ Estoque dentro da faixa segura (entre o mínimo e o máximo)';
-  }
 
   // saldo de conchas e entrada de bagaço por turno (valores do registro diário em tela)
   const sgn = n => (n > 0 ? '+' : n < 0 ? '−' : '');
@@ -2395,13 +2383,11 @@ function buildResumoWhatsapp(){
   }
 
   return `*PROJEÇÃO DE ESTOQUE DE BAGAÇO*\n`
-    + `Estoque atual: *${fmt(r.estoqueAtual,0)} t* de ${fmt(r.estoqueMax,0)} t máx. (${fmt(pct,0)}%)\n\n`
+    + `Estoque atual: *${fmt(r.estoqueAtual,0)} t*\n\n`
     + blocoTurnos
     + `${entradaLabel}\n`
     + `Saída diária: *${fmt(r.saida,0)} t/dia*\n`
-    + `Saldo diário: *${(r.saldo>=0?'+':'')}${fmt(r.saldo,0)} t/dia*\n\n`
-    + `Estoque estimado para daqui 30 dias (${dateOffsetStr(30)}): *${fmt(r.estoqueDia30,0)} t*\n`
-    + `${statusLinha}`;
+    + `Saldo diário: *${(r.saldo>=0?'+':'')}${fmt(r.saldo,0)} t/dia*`;
 }
 
 const btnWhatsapp = document.getElementById('btnWhatsapp');
