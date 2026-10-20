@@ -1096,6 +1096,7 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
           <div class="concha-name" style="--cl-color:#f2c14e;">C</div>
           <input type="number" id="recebC" value="0" min="0" step="1" inputmode="numeric">
         </div>
+        <div class="sign-hint" id="origemRegistro" style="color:var(--steam);"></div>
         <div class="sign-hint">toneladas recebidas de outras unidades, somadas direto no saldo do dia (se o dia tiver total importado, o total importado vale no lugar)</div>
 
         <button type="button" class="btn-primary" id="btnRegistrar">Registrar lançamento</button>
@@ -1193,6 +1194,7 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
         <div class="hist-head">
           <div class="label" style="margin:0;">Importar recebimentos de outras unidades</div>
         </div>
+        <div id="origemAtual" class="hint-txt" style="margin-bottom:8px;"></div>
         <p class="hint-txt">Cole uma linha por dia, separada por tabulação: <b>data · origem · destino · nfs · toneladas</b> (ex.: <b>2026-09-17 ⇥ TRC ⇥ RDN ⇥ 2 ⇥ 30.40</b>). A linha de cabeçalho é opcional e a data pode vir como AAAA-MM-DD ou DD/MM/AAAA. Importar de novo o mesmo dia e a mesma origem sobrescreve o registro anterior, então dá para atualizar o dia parcial depois. Quando um dia tem total importado, ele entra no saldo no lugar dos campos de recebimento por turno.</p>
         <textarea class="txt-in" id="recebTexto" rows="7" placeholder="data&#9;origem&#9;destino&#9;nfs&#9;toneladas&#10;2026-09-17&#9;TRC&#9;RDN&#9;2&#9;30.40"></textarea>
         <div class="row-actions">
@@ -2015,6 +2017,30 @@ function syncEstoqueAtualComEstimativa(estimado){
   scheduleSaveParametros();
 }
 
+// nomes das unidades de origem (código importado -> nome); códigos novos aparecem como vieram
+const NOMES_UNIDADE = { TRC:'Terra Rica' };
+function nomeUnidade(c){ return NOMES_UNIDADE[c] || c; }
+// texto com a(s) unidade(s) que forneceram bagaço no dia
+function origensTxt(imp, comT){
+  if(!imp || !imp.origens) return '';
+  const ks = Object.keys(imp.origens);
+  if(!ks.length) return '';
+  if(ks.length === 1 && !comT) return nomeUnidade(ks[0]);
+  return ks.map(k=> nomeUnidade(k) + (comT ? ' ' + fmt(imp.origens[k],1) + ' t' : '')).join(' + ');
+}
+// mostra qual unidade está fornecendo bagaço (último dia com recebimento importado)
+function atualizarOrigemAtual(){
+  const ds = Object.keys(recebByDate).filter(d=> recebByDate[d].total > 0).sort();
+  const el1 = document.getElementById('origemAtual'), el2 = document.getElementById('origemRegistro');
+  let txt = '';
+  if(ds.length){
+    const d = ds[ds.length-1], imp = recebByDate[d];
+    const [y,m,dd] = d.split('-');
+    txt = 'Unidade fornecendo bagaço: ' + origensTxt(imp, true) + ' (último recebimento em ' + dd + '/' + m + ')';
+  }
+  if(el1) el1.innerHTML = txt ? '<b>' + txt + '</b>' : '';
+  if(el2) el2.textContent = txt;
+}
 // recebimento de outras unidades de um dia: o total importado (coleção "recebimentos")
 // vale no lugar da soma digitada por turno; sem importação, usa a soma dos turnos
 function recebidoDia(day, d){
@@ -2082,7 +2108,7 @@ function renderHistorico(byDate){
     totalT += recebidoT;
     const imp = recebByDate[d];
     const recebCell = recebidoT > 0
-      ? `+${fmt(recebidoT,imp ? 2 : 0)} t${imp && imp.nfs ? ` <span style="color:var(--text-dim);font-size:10px;">(${imp.nfs} NF)</span>` : ''}`
+      ? `+${fmt(recebidoT,imp ? 2 : 0)} t${imp && imp.nfs ? ` <span style="color:var(--text-dim);font-size:10px;">(${imp.nfs} NF)</span>` : ''}${origensTxt(imp) ? ` <span style="color:var(--text-dim);font-size:10px;">${origensTxt(imp)}</span>` : ''}`
       : '<span style="color:var(--text-dim)">—</span>';
     const [y,m,dd] = d.split('-');
     const isHoje = d === todayStr();
@@ -2160,11 +2186,14 @@ if(FB_READY){
       const m = {};
       snap.forEach(doc=>{
         const r = doc.data();
-        if(!m[r.data]) m[r.data] = { total:0, nfs:0 };
+        if(!m[r.data]) m[r.data] = { total:0, nfs:0, origens:{} };
         m[r.data].total += Number(r.toneladas) || 0;
+        const og = String(r.origem || '').toUpperCase();
+        if(og) m[r.data].origens[og] = (m[r.data].origens[og] || 0) + (Number(r.toneladas) || 0);
         m[r.data].nfs += Number(r.nfs) || 0;
       });
       recebByDate = m;
+      atualizarOrigemAtual();
       renderHistorico(lastByDate);
       recomputeMedia();
     }, err=>{
@@ -2376,6 +2405,7 @@ function buildResumoWhatsapp(){
     blocoTurnos += `*Saldo de bagaço${ddmmReg ? ' (' + ddmmReg + ')' : ''}*\n`
       + `Saldo anterior (${ddmmAnt}): ${fmt(anterior,1)} t\n`
       + `+ Recebido de outras unidades: ${fmt(recebidoDiaT,1)} t${impDia && impDia.nfs ? ' (' + impDia.nfs + ' NF)' : ''}\n`
+      + (origensTxt(impDia, true) ? `Origem: ${origensTxt(impDia, true)}\n` : '')
       + `${saldoConchasT < 0 ? '−' : '+'} Saldo de conchas: ${fmt(Math.abs(saldoConchasT),1)} t\n`
       + `= *Saldo atual: ${fmt(atualCalc,1)} t*\n\n`;
   } else {
