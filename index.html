@@ -1105,11 +1105,15 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
 
       <div class="group">
         <div class="slider-row">
-          <span class="label" style="margin:0;color:var(--ember);">Massa por concha</span>
+          <span class="label" style="margin:0;color:var(--ember);">Massa por concha (fixa)</span>
           <span class="slider-val" id="massaVal" style="color:var(--ember);">1.40<small>t</small></span>
         </div>
-        <input type="range" id="massaConcha" min="0.8" max="1.8" step="0.05" value="1.4">
-        <div class="range-labels"><span>0,8 t</span><span>1,8 t</span></div>
+        <div class="sign-hint">Valor fixo no código (MASSA_CONCHA). Para alterar, é preciso editar o HTML.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+          <button type="button" class="btn-ghost" id="btnBackup">Exportar backup (JSON)</button>
+          <button type="button" class="btn-ghost" id="btnPadronizar">Padronizar histórico em 1,4 t</button>
+        </div>
+        <div class="save-status" id="padStatus"></div>
       </div>
 
       <div class="group">
@@ -1705,6 +1709,7 @@ Object.keys(signBtns).forEach(k=>{
 
 document.getElementById('regData').valueAsDate = new Date();
 
+const MASSA_CONCHA = 1.4; // t por concha — fixo; alterar apenas editando aqui
 const els = {
   estoqueAtual: document.getElementById('estoqueAtual'),
   estoqueMax: document.getElementById('estoqueMax'),
@@ -1714,7 +1719,6 @@ const els = {
   conchasA: document.getElementById('conchasA'),
   conchasB: document.getElementById('conchasB'),
   conchasC: document.getElementById('conchasC'),
-  massaConcha: document.getElementById('massaConcha'),
   carretas: document.getElementById('carretas'),
   densidade: document.getElementById('densidade'),
 };
@@ -1853,7 +1857,7 @@ function recalc(){
   const conchasA = parseFloat(els.conchasA.value) || 0;
   const conchasB = parseFloat(els.conchasB.value) || 0;
   const conchasC = parseFloat(els.conchasC.value) || 0;
-  const massa = parseFloat(els.massaConcha.value) || 0;
+  const massa = MASSA_CONCHA;
   const carretas = parseFloat(els.carretas.value) || 0;
   const densidade = parseFloat(els.densidade.value) || 0;
   const janela = parseInt(document.getElementById('janelaMedia').value) || 3;
@@ -2061,7 +2065,7 @@ function netDia(day, d){
   ['A','B','C'].forEach(k=>{
     const r = day[k];
     if(!r) return;
-    net += r.conchas * r.massaConcha;
+    net += r.conchas * MASSA_CONCHA;
   });
   return net + recebidoDia(day, d);
 }
@@ -2101,7 +2105,7 @@ function renderHistorico(byDate){
     const cell = t=>{
       const r = day[t];
       if(!r) return '<span style="color:var(--text-dim)">—</span>';
-      totalT += r.conchas * r.massaConcha;
+      totalT += r.conchas * MASSA_CONCHA;
       return `<span class="${r.conchas<0?'neg':'pos'}">${fmtSigned(r.conchas)}</span>`;
     };
     const cellA = cell('A'), cellB = cell('B'), cellC = cell('C');
@@ -2216,7 +2220,6 @@ function applyParametros(p){
   setIfNotFocused(els.estoqueAtual, p.estoqueAtual);
   setIfNotFocused(els.estoqueMax, p.estoqueMax);
   setIfNotFocused(els.estoqueMin, p.estoqueMin);
-  setIfNotFocused(els.massaConcha, p.massaConcha);
   setIfNotFocused(els.carretas, p.carretasDia);
   setIfNotFocused(els.densidade, p.densidadeCarreta);
   setIfNotFocused(janelaEl, p.mediaMovelDias);
@@ -2243,7 +2246,6 @@ function scheduleSaveParametros(){
         estoqueAtual: parseFloat(els.estoqueAtual.value) || 0,
         estoqueMax: parseFloat(els.estoqueMax.value) || 0,
         estoqueMin: parseFloat(els.estoqueMin.value) || 0,
-        massaConcha: parseFloat(els.massaConcha.value) || 0,
         carretasDia: parseFloat(els.carretas.value) || 0,
         densidadeCarreta: parseFloat(els.densidade.value) || 0,
         mediaMovelDias: parseInt(janelaEl.value) || 3,
@@ -2256,11 +2258,47 @@ function scheduleSaveParametros(){
     }catch(e){ console.error(e); setStatus('Erro ao salvar parâmetros', 'err'); }
   }, 700);
 }
-[els.estoqueAtual, els.estoqueMax, els.estoqueMin, els.massaConcha, els.carretas, els.densidade, janelaEl, els.estoqueAncoraValor, els.estoqueAncoraData].forEach(el=>{
+[els.estoqueAtual, els.estoqueMax, els.estoqueMin, els.carretas, els.densidade, janelaEl, els.estoqueAncoraValor, els.estoqueAncoraData].forEach(el=>{
   el.addEventListener('change', scheduleSaveParametros);
 });
 document.getElementById('estoqueAncoraValor').addEventListener('input', ()=> renderHistorico(lastByDate));
 document.getElementById('estoqueAncoraData').addEventListener('input', ()=> renderHistorico(lastByDate));
+
+// ---- Backup e padronização do histórico (massa fixa 1,4 t) ----
+async function lerTodosLancamentos(){
+  const snap = await db.collection('lancamentos').get();
+  return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+}
+function padMsg(t, cls){ const e=document.getElementById('padStatus'); e.textContent=t; e.className='save-status'+(cls?' '+cls:''); }
+document.getElementById('btnBackup').addEventListener('click', async ()=>{
+  if(!FB_READY){ padMsg('Firebase não configurado','err'); return; }
+  try{
+    padMsg('Gerando backup…');
+    const docs = await lerTodosLancamentos();
+    const blob = new Blob([JSON.stringify(docs.map(d=>{ const o={...d}; delete o.updatedAt; return o; }),null,1)],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'backup-lancamentos-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    padMsg(docs.length + ' lançamentos exportados ✓','ok');
+  }catch(e){ console.error(e); padMsg('Erro ao exportar backup','err'); }
+});
+document.getElementById('btnPadronizar').addEventListener('click', async ()=>{
+  if(!FB_READY){ padMsg('Firebase não configurado','err'); return; }
+  try{
+    const docs = await lerTodosLancamentos();
+    const alvo = docs.filter(d=>d.massaConcha !== MASSA_CONCHA);
+    if(!alvo.length){ padMsg('Todos os ' + docs.length + ' lançamentos já estão em 1,4 t ✓','ok'); return; }
+    if(!confirm('Regravar massaConcha = 1,4 t em ' + alvo.length + ' de ' + docs.length + ' lançamentos?\n\nConchas, sinais, datas e recebimentos não serão alterados.\nRecomendado exportar o backup antes.')) return;
+    padMsg('Padronizando…');
+    for(let k=0;k<alvo.length;k+=400){
+      const batch = db.batch();
+      alvo.slice(k,k+400).forEach(d=> batch.update(db.collection('lancamentos').doc(d.id), { massaConcha: MASSA_CONCHA }));
+      await batch.commit();
+    }
+    padMsg(alvo.length + ' lançamentos padronizados em 1,4 t ✓','ok');
+  }catch(e){ console.error(e); padMsg('Erro ao padronizar','err'); }
+});
 
 // ---- Lançamento diário (conchas por turno, com sinal) ----
 // cada lançamento vira um documento com id "AAAA-MM-DD_TURNO" (upsert natural)
@@ -2272,7 +2310,7 @@ document.getElementById('btnRegistrar').addEventListener('click', async ()=>{
   btn.disabled = true;
   setStatus('Salvando…');
   const data = document.getElementById('regData').value;
-  const massa = parseFloat(els.massaConcha.value) || 0;
+  const massa = MASSA_CONCHA;
   try{
     const batch = db.batch();
     ['A','B','C'].forEach(t=>{
