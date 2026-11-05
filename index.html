@@ -1204,6 +1204,8 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
         <textarea class="txt-in" id="recebTexto" rows="7" placeholder="data&#9;origem&#9;destino&#9;nfs&#9;toneladas&#10;2026-09-17&#9;TRC&#9;RDN&#9;2&#9;30.40"></textarea>
         <div class="row-actions">
           <button type="button" class="btn-main" id="btnImportarReceb">Importar recebimentos</button>
+          <button type="button" class="btn-ghost" id="btnBackupReceb">Exportar backup dos recebimentos</button>
+          <button type="button" class="btn-ghost" id="btnApagarReceb" style="color:#ff6b6b;border-color:#ff6b6b;">Apagar todos os recebimentos</button>
         </div>
         <div class="st" id="recebStatus"></div>
       </div>
@@ -2395,6 +2397,41 @@ document.getElementById('btnImportarReceb').addEventListener('click', async ()=>
   }finally{
     btn.disabled = false;
   }
+});
+
+// ---- Backup e exclusão da coleção "recebimentos" (somente ela; lançamentos de conchas não são tocados) ----
+async function lerTodosRecebimentos(){
+  const snap = await db.collection('recebimentos').get();
+  return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+}
+document.getElementById('btnBackupReceb').addEventListener('click', async ()=>{
+  if(!FB_READY){ setRecebStatus('Firebase não configurado','err'); return; }
+  try{
+    setRecebStatus('Gerando backup…');
+    const docs = await lerTodosRecebimentos();
+    const blob = new Blob([JSON.stringify(docs.map(d=>{ const o={...d}; delete o.updatedAt; return o; }),null,1)],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'backup-recebimentos-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    setRecebStatus(docs.length + ' registros exportados ✓','ok');
+  }catch(e){ console.error(e); setRecebStatus('Erro ao exportar backup','err'); }
+});
+document.getElementById('btnApagarReceb').addEventListener('click', async ()=>{
+  if(!FB_READY){ setRecebStatus('Firebase não configurado','err'); return; }
+  try{
+    const docs = await lerTodosRecebimentos();
+    if(!docs.length){ setRecebStatus('A coleção de recebimentos já está vazia.','ok'); return; }
+    const r = prompt('Isto apaga ' + docs.length + ' registros da coleção "recebimentos" (só ela). Lançamentos de conchas e KPIs não são alterados.\n\nRecomendado exportar o backup antes.\n\nDigite APAGAR para confirmar:');
+    if(r !== 'APAGAR'){ setRecebStatus('Exclusão cancelada.'); return; }
+    setRecebStatus('Apagando…');
+    for(let k=0;k<docs.length;k+=400){
+      const batch = db.batch();
+      docs.slice(k,k+400).forEach(d=> batch.delete(db.collection('recebimentos').doc(d.id)));
+      await batch.commit();
+    }
+    setRecebStatus(docs.length + ' registros apagados ✓ Já pode importar a base detalhada.','ok');
+  }catch(e){ console.error(e); setRecebStatus('Erro ao apagar. Confira as regras do Firestore.','err'); }
 });
 
 /* expõe o recalc desta aba para o botão de tema global poder
