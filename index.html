@@ -1206,6 +1206,7 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
           <button type="button" class="btn-main" id="btnImportarReceb">Importar recebimentos</button>
           <button type="button" class="btn-ghost" id="btnBackupReceb">Exportar backup dos recebimentos</button>
           <button type="button" class="btn-ghost" id="btnApagarReceb" style="color:#ff6b6b;border-color:#ff6b6b;">Apagar todos os recebimentos</button>
+          <button type="button" class="btn-ghost" id="btnZerarRecebTurno" style="color:#ff6b6b;border-color:#ff6b6b;">Zerar recebimentos digitados nos turnos</button>
         </div>
         <div class="st" id="recebStatus"></div>
       </div>
@@ -2432,6 +2433,25 @@ document.getElementById('btnApagarReceb').addEventListener('click', async ()=>{
     }
     setRecebStatus(docs.length + ' registros apagados ✓ Já pode importar a base detalhada.','ok');
   }catch(e){ console.error(e); setRecebStatus('Erro ao apagar. Confira as regras do Firestore.','err'); }
+});
+
+document.getElementById('btnZerarRecebTurno').addEventListener('click', async ()=>{
+  if(!FB_READY){ setRecebStatus('Firebase não configurado','err'); return; }
+  try{
+    const docs = await lerTodosLancamentos();
+    const alvo = docs.filter(d=> (parseFloat(d.recebimento) || 0) !== 0);
+    if(!alvo.length){ setRecebStatus('Nenhum recebimento digitado nos turnos.','ok'); return; }
+    const tot = alvo.reduce((a,d)=> a + (parseFloat(d.recebimento)||0), 0);
+    const r = prompt('Isto zera o campo "Recebimento" em ' + alvo.length + ' lançamentos de turno (soma ' + tot.toFixed(1) + ' t). Conchas, sinais e datas não são alterados.\n\nRecomendado exportar o backup dos lançamentos antes (botão na área de massa da concha).\n\nDigite ZERAR para confirmar:');
+    if(r !== 'ZERAR'){ setRecebStatus('Cancelado.'); return; }
+    setRecebStatus('Zerando…');
+    for(let k=0;k<alvo.length;k+=400){
+      const batch = db.batch();
+      alvo.slice(k,k+400).forEach(d=> batch.update(db.collection('lancamentos').doc(d.id), { recebimento: 0 }));
+      await batch.commit();
+    }
+    setRecebStatus(alvo.length + ' lançamentos zerados ✓','ok');
+  }catch(e){ console.error(e); setRecebStatus('Erro ao zerar. Confira as regras do Firestore.','err'); }
 });
 
 /* expõe o recalc desta aba para o botão de tema global poder
