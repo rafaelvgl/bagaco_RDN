@@ -1067,6 +1067,11 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
         </div>
 
         <div class="concha-line">
+          <div class="concha-name" style="--cl-color:#f2c14e;">C</div>
+          <input type="number" id="conchasC" value="4" min="0" step="1" inputmode="numeric">
+          <button type="button" class="sign-btn pos" id="signC" data-sign="1">+</button>
+        </div>
+        <div class="concha-line">
           <div class="concha-name" style="--cl-color:#ff7a45;">A</div>
           <input type="number" id="conchasA" value="4" min="0" step="1" inputmode="numeric">
           <button type="button" class="sign-btn pos" id="signA" data-sign="1">+</button>
@@ -1076,14 +1081,13 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
           <input type="number" id="conchasB" value="3" min="0" step="1" inputmode="numeric">
           <button type="button" class="sign-btn pos" id="signB" data-sign="1">+</button>
         </div>
-        <div class="concha-line">
-          <div class="concha-name" style="--cl-color:#f2c14e;">C</div>
-          <input type="number" id="conchasC" value="4" min="0" step="1" inputmode="numeric">
-          <button type="button" class="sign-btn pos" id="signC" data-sign="1">+</button>
-        </div>
         <div class="sign-hint">toque em <b>+ / −</b> · <b>+</b> sobrou (entrada) · <b>−</b> foi consumida (saída)</div>
 
         <div class="label" style="margin-top:16px;color:var(--steam);">Recebimento de outras unidades (t)</div>
+        <div class="concha-line">
+          <div class="concha-name" style="--cl-color:#f2c14e;">C</div>
+          <input type="number" id="recebC" value="0" min="0" step="1" inputmode="numeric">
+        </div>
         <div class="concha-line">
           <div class="concha-name" style="--cl-color:#ff7a45;">A</div>
           <input type="number" id="recebA" value="0" min="0" step="1" inputmode="numeric">
@@ -1091,10 +1095,6 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
         <div class="concha-line">
           <div class="concha-name" style="--cl-color:#8fd6e8;">B</div>
           <input type="number" id="recebB" value="0" min="0" step="1" inputmode="numeric">
-        </div>
-        <div class="concha-line">
-          <div class="concha-name" style="--cl-color:#f2c14e;">C</div>
-          <input type="number" id="recebC" value="0" min="0" step="1" inputmode="numeric">
         </div>
         <div class="sign-hint" id="origemRegistro" style="color:var(--steam);"></div>
         <div class="sign-hint">toneladas recebidas de outras unidades, somadas direto no saldo do dia (se o dia tiver total importado, o total importado vale no lugar)</div>
@@ -1106,9 +1106,9 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
       <div class="group">
         <div class="slider-row">
           <span class="label" style="margin:0;color:var(--ember);">Massa por concha</span>
-          <span class="slider-val" id="massaVal" style="color:var(--ember);">1.30<small>t</small></span>
+          <span class="slider-val" id="massaVal" style="color:var(--ember);">1.40<small>t</small></span>
         </div>
-        <input type="range" id="massaConcha" min="0.8" max="1.8" step="0.05" value="1.3">
+        <input type="range" id="massaConcha" min="0.8" max="1.8" step="0.05" value="1.4">
         <div class="range-labels"><span>0,8 t</span><span>1,8 t</span></div>
       </div>
 
@@ -1187,6 +1187,7 @@ table.ktab td.strong{color:var(--text);font-weight:600;}
           <div class="label" style="margin:0;">Histórico de lançamentos (compartilhado)</div>
           <button type="button" class="btn-ghost" id="btnAtualizarHist">Atualizar</button>
         </div>
+        <div class="sign-hint" style="margin:0 0 8px;">Turnos em ordem cronológica do dia: <b>C</b> (00:00–06:59) · <b>A</b> (07:00–15:20) · <b>B</b> (15:21–23:40)</div>
         <div id="histWrap"><div class="hist-empty">Carregando…</div></div>
       </div>
 
@@ -1937,7 +1938,7 @@ function recalc(){
     usandoMedia: mediaEntrada !== null,
     dataReg: document.getElementById('regData').value,
     massa,
-    turnos: ['A','B','C'].map(t=>({
+    turnos: ['C','A','B'].map(t=>({
       t,
       conchas: signs[t] * (parseFloat(els['conchas'+t].value) || 0),
       receb: parseFloat(document.getElementById('receb'+t).value) || 0
@@ -2093,7 +2094,7 @@ function renderHistorico(byDate){
   const dates = Array.from(allDates).sort().reverse().slice(0, 21);
   if(!dates.length){ histWrap.innerHTML = '<div class="hist-empty">Nenhum lançamento registrado ainda.</div>'; return; }
   const temEstimativa = Object.keys(estimado).length > 0;
-  let html = `<table class="hist"><thead><tr><th>Data</th><th>A</th><th>B</th><th>C</th><th>Recebido</th><th>Total (t)</th>${temEstimativa ? '<th>Estoque estimado</th>' : ''}</tr></thead><tbody>`;
+  let html = `<table class="hist"><thead><tr><th>Data</th><th>C</th><th>A</th><th>B</th><th>Recebido</th><th>Total (t)</th>${temEstimativa ? '<th>Estoque estimado</th>' : ''}</tr></thead><tbody>`;
   dates.forEach(d=>{
     const day = byDate[d] || {};
     let totalT = 0;
@@ -2115,7 +2116,7 @@ function renderHistorico(byDate){
     const estCell = temEstimativa
       ? `<td class="tot">${estimado[d] !== undefined ? fmt(estimado[d],0) + ' t' : '<span style="color:var(--text-dim)">—</span>'}</td>`
       : '';
-    html += `<tr${isHoje ? ' style="background:rgba(255,122,69,0.06);"' : ''}><td class="date">${dd}/${m}/${y}${isHoje ? ' <span style="color:var(--ember);font-size:10px;">(hoje)</span>' : ''}</td><td>${cellA}</td><td>${cellB}</td><td>${cellC}</td><td class="pos">${recebCell}</td><td class="tot">${fmtSigned(Math.round(totalT))} t</td>${estCell}</tr>`;
+    html += `<tr${isHoje ? ' style="background:rgba(255,122,69,0.06);"' : ''}><td class="date">${dd}/${m}/${y}${isHoje ? ' <span style="color:var(--ember);font-size:10px;">(hoje)</span>' : ''}</td><td>${cellC}</td><td>${cellA}</td><td>${cellB}</td><td class="pos">${recebCell}</td><td class="tot">${fmtSigned(Math.round(totalT))} t</td>${estCell}</tr>`;
   });
   html += '</tbody></table>';
   histWrap.innerHTML = html;
